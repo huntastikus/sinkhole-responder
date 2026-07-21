@@ -18,10 +18,10 @@ test("setByPath mutates only the requested leaf", () => {
 });
 
 test("duration validation accepts Go duration strings used by the form", () => {
-  for (const value of ["0s", "250ms", "12h", "5µs", "9us"]) {
+  for (const value of ["0s", "250ms", "1.5s", "12h", "5µs", "9us"]) {
     assert.equal(isDuration(value), true, value);
   }
-  for (const value of ["2", "1.5s", "2days", "", " 2s "]) {
+  for (const value of ["2", "2days", "", " 2s "]) {
     assert.equal(isDuration(value), false, value);
   }
 });
