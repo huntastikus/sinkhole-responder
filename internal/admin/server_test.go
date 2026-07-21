@@ -219,6 +219,27 @@ func TestServeReturnsNilAfterContextCancel(t *testing.T) {
 	}
 }
 
+func TestAdminHTTPServerHasResourceLimits(t *testing.T) {
+	t.Parallel()
+
+	server := newAdminHTTPServer(http.NotFoundHandler())
+	if server.ReadHeaderTimeout != adminReadHeaderTimeout {
+		t.Errorf("ReadHeaderTimeout = %v, want %v", server.ReadHeaderTimeout, adminReadHeaderTimeout)
+	}
+	if server.ReadTimeout != adminReadTimeout {
+		t.Errorf("ReadTimeout = %v, want %v", server.ReadTimeout, adminReadTimeout)
+	}
+	if server.WriteTimeout != adminWriteTimeout {
+		t.Errorf("WriteTimeout = %v, want %v", server.WriteTimeout, adminWriteTimeout)
+	}
+	if server.IdleTimeout != adminIdleTimeout {
+		t.Errorf("IdleTimeout = %v, want %v", server.IdleTimeout, adminIdleTimeout)
+	}
+	if server.MaxHeaderBytes != adminMaxHeaderBytes {
+		t.Errorf("MaxHeaderBytes = %d, want %d", server.MaxHeaderBytes, adminMaxHeaderBytes)
+	}
+}
+
 func newTestServer(t *testing.T, adminConfig config.AdminConfig) *Server {
 	t.Helper()
 	if adminConfig.SessionTTL == 0 {

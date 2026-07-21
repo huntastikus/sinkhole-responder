@@ -27,10 +27,15 @@ import (
 )
 
 const (
-	contentSecurityPolicy = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
-	adminShutdownTimeout  = 5 * time.Second
-	faviconLink           = `<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">`
-	systemHealthBanner    = `<section id="system-health-banner" class="system-health-banner" role="status" aria-live="polite" aria-atomic="true" hidden>
+	contentSecurityPolicy  = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+	adminReadHeaderTimeout = 5 * time.Second
+	adminReadTimeout       = 15 * time.Second
+	adminWriteTimeout      = 30 * time.Second
+	adminIdleTimeout       = 60 * time.Second
+	adminShutdownTimeout   = 5 * time.Second
+	adminMaxHeaderBytes    = 16 * 1024
+	faviconLink            = `<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">`
+	systemHealthBanner     = `<section id="system-health-banner" class="system-health-banner" role="status" aria-live="polite" aria-atomic="true" hidden>
     <div class="system-health-overall">
       <span id="system-health-dot" class="system-health-dot" aria-hidden="true"></span>
       <strong>System <span id="system-health-overall">checking</span></strong>
@@ -192,10 +197,8 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 
 	running := []runningServer{{
-		name: "HTTP",
-		server: &http.Server{
-			Handler: s.httpHandler(adminConfig),
-		},
+		name:     "HTTP",
+		server:   newAdminHTTPServer(s.httpHandler(adminConfig)),
 		listener: httpListener,
 	}}
 	if adminConfig.TLS.Enabled {
@@ -209,12 +212,11 @@ func (s *Server) Serve(ctx context.Context) error {
 			_ = httpListener.Close()
 			return fmt.Errorf("bind admin HTTPS listener: %w", err)
 		}
+		httpsServer := newAdminHTTPServer(s.Handler())
+		httpsServer.TLSConfig = tlsConfig
 		running = append(running, runningServer{
-			name: "HTTPS",
-			server: &http.Server{
-				Handler:   s.Handler(),
-				TLSConfig: tlsConfig,
-			},
+			name:     "HTTPS",
+			server:   httpsServer,
 			listener: tls.NewListener(tcpListener, tlsConfig),
 		})
 	}
@@ -254,6 +256,17 @@ type runningServer struct {
 	name     string
 	server   *http.Server
 	listener net.Listener
+}
+
+func newAdminHTTPServer(handler http.Handler) *http.Server {
+	return &http.Server{
+		Handler:           handler,
+		ReadHeaderTimeout: adminReadHeaderTimeout,
+		ReadTimeout:       adminReadTimeout,
+		WriteTimeout:      adminWriteTimeout,
+		IdleTimeout:       adminIdleTimeout,
+		MaxHeaderBytes:    adminMaxHeaderBytes,
+	}
 }
 
 func (s *Server) page(name string) http.HandlerFunc {
