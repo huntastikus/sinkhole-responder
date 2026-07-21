@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/huntastikus/sinkhole-responder/compare/v0.1.0...v0.2.0) (2026-07-21)
+
+
+### Features
+
+* polish admin deployment and add secure request logging ([4c9fe4b](https://github.com/huntastikus/sinkhole-responder/commit/4c9fe4bb5696c70d828af80d3bcf01ec0dfe3ffd))
+
 ## 0.1.0 (2026-07-21)
 
 
