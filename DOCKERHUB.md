@@ -11,7 +11,7 @@ media, and beacon requests. It includes an authenticated admin interface for
 configuration, rules, certificates, diagnostics, and live traffic visibility.
 
 [Source code](https://github.com/huntastikus/sinkhole-responder) ·
-[Full documentation](https://github.com/huntastikus/sinkhole-responder#readme) ·
+[Full documentation](https://github.com/huntastikus/sinkhole-responder/tree/main/docs) ·
 [Releases](https://github.com/huntastikus/sinkhole-responder/releases) ·
 [Issues](https://github.com/huntastikus/sinkhole-responder/issues)
 
@@ -102,14 +102,14 @@ routing instead of exposing the responder on unexpected ports.
 
 Prefer `SINKHOLE_ADMIN_PASSWORD_FILE` with a file mounted under `/run/secrets`
 instead of placing a password directly in container metadata. See the
-[container parameter reference](https://github.com/huntastikus/sinkhole-responder#container-parameters)
+[container parameter reference](https://github.com/huntastikus/sinkhole-responder/blob/main/docs/deployment.md#compose-parameters)
 for every optional port, listener, TLS, rulepack, logging, and security setting.
 
 ## DNS sinkhole setup
 
 Configure your DNS sinkhole to return the Sinkhole Responder host's stable LAN
 IPv4 or IPv6 address for blocked names. Product-specific guidance is available
-for [AdGuard Home](https://github.com/huntastikus/sinkhole-responder#dns-sinkhole-configuration)
+for [AdGuard Home](https://github.com/huntastikus/sinkhole-responder/blob/main/docs/dns-setup.md#adguard-home)
 and Pi-hole-compatible deployments in the full documentation.
 
 HTTPS requires controlled clients to trust the responder's local CA. This is
