@@ -1,0 +1,33 @@
+name: Docker Hub overview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - DOCKERHUB.md
+      - .github/workflows/dockerhub-overview.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dockerhub-overview
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish overview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Update Docker Hub overview
+        uses: peter-evans/dockerhub-description@e98e4d1628a5f3be2be7c231e50981aee98723ae # v4.0.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: huntastikus/sinkhole-responder
+          short-description: Safe HTTP(S) placeholders and admin UI for AdGuard Home, Pi-hole, and other DNS sinkholes.
+          readme-filepath: ./DOCKERHUB.md
