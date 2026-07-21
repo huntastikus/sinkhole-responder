@@ -298,6 +298,7 @@ func TestPublicRoutesDoNotRequireAuthentication(t *testing.T) {
 		{method: http.MethodGet, path: "/login", wantStatus: http.StatusOK},
 		{method: http.MethodGet, path: "/setup", wantStatus: http.StatusOK},
 		{method: http.MethodGet, path: "/assets/app.css", wantStatus: http.StatusOK},
+		{method: http.MethodGet, path: "/assets/logo.svg", wantStatus: http.StatusOK},
 	}
 	for _, test := range tests {
 		t.Run(test.method+" "+test.path, func(t *testing.T) {

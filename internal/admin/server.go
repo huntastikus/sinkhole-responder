@@ -29,6 +29,7 @@ import (
 const (
 	contentSecurityPolicy = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
 	adminShutdownTimeout  = 5 * time.Second
+	faviconLink           = `<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">`
 	systemHealthBanner    = `<section id="system-health-banner" class="system-health-banner" role="status" aria-live="polite" aria-atomic="true" hidden>
     <div class="system-health-overall">
       <span id="system-health-dot" class="system-health-dot" aria-hidden="true"></span>
@@ -264,7 +265,7 @@ func (s *Server) page(name string) http.HandlerFunc {
 func assetsHandler(web fs.FS) http.Handler {
 	files := http.StripPrefix("/assets/", http.FileServerFS(web))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasSuffix(r.URL.Path, ".js") && !strings.HasSuffix(r.URL.Path, ".css") {
+		if !strings.HasSuffix(r.URL.Path, ".js") && !strings.HasSuffix(r.URL.Path, ".css") && !strings.HasSuffix(r.URL.Path, ".svg") {
 			http.NotFound(w, r)
 			return
 		}
@@ -280,7 +281,8 @@ func (s *Server) serveWebPage(w http.ResponseWriter, name string) {
 		return
 	}
 	footer := `<footer class="app-footer"><span>` + template.HTMLEscapeString(s.displayVersion) + `</span></footer>`
-	html := strings.Replace(string(page), "<body>", "<body class=\"admin-body\">\n  "+systemHealthBanner, 1)
+	html := strings.Replace(string(page), "</head>", "  "+faviconLink+"\n</head>", 1)
+	html = strings.Replace(html, "<body>", "<body class=\"admin-body\">\n  "+systemHealthBanner, 1)
 	html = strings.Replace(html, "</body>", "  "+footer+"\n  "+systemHealthScript+"\n</body>", 1)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(html))

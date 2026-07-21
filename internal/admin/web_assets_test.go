@@ -92,6 +92,42 @@ func TestWebAssetsWireSharedNavigation(t *testing.T) {
 	}
 }
 
+func TestWebAssetsWireSharedBranding(t *testing.T) {
+	t.Parallel()
+
+	logo, err := fs.ReadFile(embeddedWeb, "web/logo.svg")
+	if err != nil {
+		t.Fatalf("read embedded logo: %v", err)
+	}
+	if !strings.Contains(string(logo), `<title id="title">Sinkhole Responder</title>`) {
+		t.Error("embedded logo is missing its accessible title")
+	}
+
+	nav, err := fs.ReadFile(embeddedWeb, "web/nav.js")
+	if err != nil {
+		t.Fatalf("read shared navigation module: %v", err)
+	}
+	if !strings.Contains(string(nav), `brandLogo.src = "/assets/logo.svg"`) {
+		t.Error("shared navigation does not use the embedded logo")
+	}
+
+	for _, name := range []string{"login.html", "setup.html"} {
+		t.Run(name, func(t *testing.T) {
+			content, err := fs.ReadFile(embeddedWeb, "web/"+name)
+			if err != nil {
+				t.Fatalf("read embedded page: %v", err)
+			}
+			page := string(content)
+			if !strings.Contains(page, `class="auth-mark" src="/assets/logo.svg"`) {
+				t.Error("auth page does not use the embedded logo")
+			}
+			if !strings.Contains(page, `rel="icon" href="/assets/logo.svg" type="image/svg+xml"`) {
+				t.Error("auth page does not use the embedded logo as its favicon")
+			}
+		})
+	}
+}
+
 func TestLoginIncludesVersionPlaceholder(t *testing.T) {
 	t.Parallel()
 

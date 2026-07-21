@@ -19,6 +19,9 @@ test.describe.serial("admin GUI", () => {
 
   test("first-run setup creates credentials and opens the wizard", async () => {
     await page.goto(`${adminBaseURL}/setup`);
+    await expect(page.locator(".auth-mark")).toBeVisible();
+    await expect(page.locator(".auth-mark")).toHaveAttribute("src", "/assets/logo.svg");
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/assets/logo.svg");
     await page.getByLabel("Password").fill(adminPassword);
     await page.getByRole("button", { name: "Create password" }).click();
 
@@ -57,6 +60,9 @@ test.describe.serial("admin GUI", () => {
     const dashboardLink = page.locator('#app-nav a[href="/"]');
     await expect(dashboardLink).toHaveText("Dashboard");
     await expect(dashboardLink).toHaveAttribute("aria-current", "page");
+    await expect(page.locator(".app-nav-logo")).toBeVisible();
+    await expect(page.locator(".app-nav-logo")).toHaveAttribute("src", "/assets/logo.svg");
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/assets/logo.svg");
     await expect(page.locator("#gauge svg")).toBeVisible();
     await expect(page.locator('[data-metric="requests_total"]')).toHaveText(/^\d+$/);
     await expect(page.locator('[data-metric="rules_loaded"]')).toHaveText(/^[1-9]\d*$/);
@@ -110,6 +116,7 @@ test.describe.serial("admin GUI", () => {
     await page.getByRole("button", { name: "Logout" }).click();
     await expect(page).toHaveURL(`${adminBaseURL}/login`);
     await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+    await expect(page.locator(".auth-mark")).toBeVisible();
 
     await page.getByLabel("Password").fill(adminPassword);
     await page.getByRole("button", { name: "Sign in" }).click();

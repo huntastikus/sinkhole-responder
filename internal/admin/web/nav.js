@@ -150,7 +150,16 @@ function main() {
 
   const brand = document.createElement("span");
   brand.className = "app-nav-brand";
-  brand.textContent = "Sinkhole Responder";
+  const brandLogo = document.createElement("img");
+  brandLogo.className = "app-nav-logo";
+  brandLogo.src = "/assets/logo.svg";
+  brandLogo.alt = "";
+  brandLogo.width = 34;
+  brandLogo.height = 34;
+  brandLogo.setAttribute("aria-hidden", "true");
+  const brandName = document.createElement("span");
+  brandName.textContent = "Sinkhole Responder";
+  brand.append(brandLogo, brandName);
 
   const menuButton = document.createElement("button");
   menuButton.className = "app-nav-menu-button";

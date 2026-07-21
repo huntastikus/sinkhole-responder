@@ -76,6 +76,12 @@ func TestHandlerRoutes(t *testing.T) {
 			wantType:   "javascript",
 		},
 		{
+			name:       "SVG logo",
+			path:       "/assets/logo.svg",
+			wantStatus: http.StatusOK,
+			wantType:   "image/svg+xml",
+		},
+		{
 			name:       "HTML blocked from public assets",
 			path:       "/assets/config.html",
 			wantStatus: http.StatusNotFound,
@@ -137,6 +143,9 @@ func TestAdminPageShowsReleaseCandidateVersion(t *testing.T) {
 	}
 	if !strings.Contains(response.Body.String(), `<footer class="app-footer"><span>v1.2.3-RC</span></footer>`) {
 		t.Errorf("admin page does not show the normalized RC version: %q", response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), `rel="icon" href="/assets/logo.svg" type="image/svg+xml"`) {
+		t.Errorf("admin page does not use the embedded logo as its favicon: %q", response.Body.String())
 	}
 }
 
