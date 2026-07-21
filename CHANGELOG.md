@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/huntastikus/sinkhole-responder/compare/v0.2.0...v0.2.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* improve Docker release metadata ([a26c76a](https://github.com/huntastikus/sinkhole-responder/commit/a26c76a3e01f065892208e1619bd9840baccc0dc))
+* improve Docker release metadata ([#5](https://github.com/huntastikus/sinkhole-responder/issues/5)) ([50ab29e](https://github.com/huntastikus/sinkhole-responder/commit/50ab29eee53bd6266076b7a2f0d921d9de5160fc))
+
 ## [0.2.0](https://github.com/huntastikus/sinkhole-responder/compare/v0.1.0...v0.2.0) (2026-07-21)
 
 
