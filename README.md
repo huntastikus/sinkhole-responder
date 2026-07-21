@@ -13,6 +13,8 @@ advertising or tracking service.
 
 Module: `github.com/huntastikus/sinkhole-responder`
 
+Container: [huntastikus/sinkhole-responder on Docker Hub](https://hub.docker.com/r/huntastikus/sinkhole-responder)
+
 ## Contents
 
 - [How it works](#how-it-works)
@@ -509,6 +511,13 @@ buildable locally with `--build`. Configuration and GUI-managed state live in
 the writable `/data` volume; operator-provided certificates and secret files
 are mounted read-only from `/certs` and `/run/secrets`.
 
+Ready-to-run multi-platform images are available on
+[Docker Hub](https://hub.docker.com/r/huntastikus/sinkhole-responder):
+
+```sh
+docker pull huntastikus/sinkhole-responder:latest
+```
+
 ```sh
 mkdir -p data certs secrets
 docker compose up -d
@@ -896,16 +905,17 @@ After releasable work reaches `main` and CI passes, the release workflow creates
 or updates the release PR and publishes a multi-platform Docker image for
 `linux/amd64` and `linux/arm64`:
 
-```text
-huntastikus/sinkhole-responder:X.Y.Z-rc
+```sh
+docker pull huntastikus/sinkhole-responder:X.Y.Z-rc
 ```
 
-The RC tag is updated when more work is merged for the same proposed release;
-the accompanying `sha-<commit>` image tags are immutable. The admin UI displays
-RC builds as `vX.Y.Z-RC` and approved releases as `vX.Y.Z`. Test the RC, then
-approve the release by reviewing and merging the Release Please PR. That merge
-creates the `vX.Y.Z` tag, updates `CHANGELOG.md`, publishes a documented GitHub
-Release, and pushes both `huntastikus/sinkhole-responder:X.Y.Z` and `:latest`.
+The RC tag is updated when more work is merged for the same proposed release.
+The admin UI displays RC builds as `vX.Y.Z-RC` and approved releases as
+`vX.Y.Z`. Test the RC, then approve the release by reviewing and merging the
+Release Please PR. That merge creates the `vX.Y.Z` tag, updates `CHANGELOG.md`,
+publishes a documented GitHub Release, and pushes both
+`huntastikus/sinkhole-responder:X.Y.Z` and `:latest`. The GitHub Release notes
+include ready-to-copy `docker pull` commands for both tags.
 The repository must allow GitHub Actions to create pull requests under
 **Settings → Actions → General → Workflow permissions**; the workflow requests
 only the `contents: write` and `pull-requests: write` permissions it needs.
