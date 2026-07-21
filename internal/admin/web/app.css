@@ -192,7 +192,8 @@ body {
   text-align: center;
 }
 
-@media (max-width: 58rem) {
+/* Collapse before the full navigation, branding, and actions can wrap. */
+@media (max-width: 100rem) {
   .app-nav-inner {
     min-height: 3.6rem;
     flex-wrap: wrap;

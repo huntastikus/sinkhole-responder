@@ -9,7 +9,7 @@ test.describe.serial("admin GUI", () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
-    context = await browser.newContext();
+    context = await browser.newContext({ viewport: { width: 1800, height: 1100 } });
     page = await context.newPage();
   });
 
@@ -66,6 +66,23 @@ test.describe.serial("admin GUI", () => {
     await expect(page.locator("#gauge svg")).toBeVisible();
     await expect(page.locator('[data-metric="requests_total"]')).toHaveText(/^\d+$/);
     await expect(page.locator('[data-metric="rules_loaded"]')).toHaveText(/^[1-9]\d*$/);
+  });
+
+  test("navigation collapses before its links can wrap", async () => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.goto(`${adminBaseURL}/`);
+
+    const navigation = page.locator("#app-nav");
+    const navigationBox = await navigation.boundingBox();
+    expect(navigationBox?.height).toBeLessThan(80);
+
+    const menuButton = page.getByRole("button", { name: "Menu" });
+    await expect(menuButton).toBeVisible();
+    await expect(page.locator("#app-nav-panel")).toBeHidden();
+    await menuButton.click();
+    await expect(page.locator('#app-nav a[href="/config"]')).toBeVisible();
+
+    await page.setViewportSize({ width: 1800, height: 1100 });
   });
 
   test("rule builder saves a custom response and reloads the data plane", async () => {
