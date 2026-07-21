@@ -23,6 +23,22 @@ func TestFirstRunRedirectsAppToSetup(t *testing.T) {
 	assertRedirect(t, response.Result(), "/setup")
 }
 
+func TestLoginShowsReleaseCandidateVersion(t *testing.T) {
+	t.Parallel()
+
+	server := newTestServer(t, config.AdminConfig{})
+	response := httptest.NewRecorder()
+
+	server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/login", nil))
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
+	}
+	if !strings.Contains(response.Body.String(), `<p class="auth-version">v1.2.3-RC</p>`) {
+		t.Errorf("login page does not show the normalized RC version: %q", response.Body.String())
+	}
+}
+
 func TestSetupCreatesCredentialAndSession(t *testing.T) {
 	server := newTestServer(t, config.AdminConfig{
 		SessionTTL: time.Hour,

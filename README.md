@@ -791,7 +791,8 @@ huntastikus/sinkhole-responder:X.Y.Z-rc
 ```
 
 The RC tag is updated when more work is merged for the same proposed release;
-the accompanying `sha-<commit>` image tags are immutable. Test the RC, then
+the accompanying `sha-<commit>` image tags are immutable. The admin UI displays
+RC builds as `vX.Y.Z-RC` and approved releases as `vX.Y.Z`. Test the RC, then
 approve the release by reviewing and merging the Release Please PR. That merge
 creates the `vX.Y.Z` tag, updates `CHANGELOG.md`, publishes a documented GitHub
 Release, and pushes both `huntastikus/sinkhole-responder:X.Y.Z` and `:latest`.

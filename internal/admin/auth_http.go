@@ -18,7 +18,8 @@ const (
 )
 
 type authPageData struct {
-	Error string
+	Error   string
+	Version string
 }
 
 func (s *Server) authGate(next http.Handler) http.Handler {
@@ -265,6 +266,7 @@ func (s *Server) allowLogin(remoteAddr string) bool {
 }
 
 func (s *Server) renderAuthPage(w http.ResponseWriter, name string, data authPageData, status int) {
+	data.Version = s.displayVersion
 	tmpl, err := template.ParseFS(s.web, name)
 	if err != nil {
 		s.internalError(w, "parse embedded admin page", err)

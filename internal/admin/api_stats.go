@@ -47,7 +47,7 @@ type historySampleResponse struct {
 func (s *Server) handleStats(w http.ResponseWriter, _ *http.Request) {
 	snapshot := s.deps.Metrics.Snapshot()
 	response := statsResponse{
-		Version:          snapshot.Version,
+		Version:          formatDisplayVersion(snapshot.Version),
 		StartedAt:        snapshot.StartedAt.Format(time.RFC3339),
 		RequestsTotal:    snapshot.RequestsTotal,
 		RequestsByKind:   snapshot.RequestsByKind,

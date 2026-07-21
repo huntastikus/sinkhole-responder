@@ -91,3 +91,15 @@ func TestWebAssetsWireSharedNavigation(t *testing.T) {
 		})
 	}
 }
+
+func TestLoginIncludesVersionPlaceholder(t *testing.T) {
+	t.Parallel()
+
+	content, err := fs.ReadFile(embeddedWeb, "web/login.html")
+	if err != nil {
+		t.Fatalf("read login page: %v", err)
+	}
+	if !strings.Contains(string(content), `class="auth-version">{{.Version}}`) {
+		t.Error("login page is missing the build version placeholder")
+	}
+}
