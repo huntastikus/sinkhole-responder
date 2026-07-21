@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2](https://github.com/huntastikus/sinkhole-responder/compare/v0.2.1...v0.2.2) (2026-07-21)
+
+
+### Documentation
+
+* overhaul project and Docker Hub documentation ([#6](https://github.com/huntastikus/sinkhole-responder/issues/6)) ([f3116d4](https://github.com/huntastikus/sinkhole-responder/commit/f3116d465fe296908fc2e5d58ed438340db6b60a))
+* reorganize project documentation ([41d4258](https://github.com/huntastikus/sinkhole-responder/commit/41d42589cb2c286fd4ae477da438094853df601a))
+
 ## [0.2.1](https://github.com/huntastikus/sinkhole-responder/compare/v0.2.0...v0.2.1) (2026-07-21)
 
 
