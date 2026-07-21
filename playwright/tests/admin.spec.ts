@@ -3,6 +3,32 @@ import { expect, request, test, type BrowserContext, type Page } from "@playwrig
 const adminBaseURL = "http://127.0.0.1:8082";
 const dataBaseURL = "http://127.0.0.1:8083";
 const adminPassword = "playwright-admin-password";
+const authenticatedPagePaths = [
+  "/",
+  "/wizard",
+  "/config",
+  "/rules",
+  "/rulepacks",
+  "/tls",
+  "/tools",
+  "/tools/detector",
+  "/logs",
+  "/help/",
+  "/help/quick-start",
+  "/help/adguard-home",
+  "/help/tls-trust",
+  "/help/rules-rulepacks",
+  "/help/adblock-limits",
+  "/help/security",
+  "/help/troubleshooting",
+  "/help/trust-windows",
+  "/help/trust-macos",
+  "/help/trust-ios",
+  "/help/trust-android",
+  "/help/trust-debian",
+  "/help/trust-firefox",
+  "/help/trust-chrome",
+];
 
 test.describe.serial("admin GUI", () => {
   let context: BrowserContext | undefined;
@@ -81,6 +107,38 @@ test.describe.serial("admin GUI", () => {
     await expect(page.locator("#app-nav-panel")).toBeHidden();
     await menuButton.click();
     await expect(page.locator('#app-nav a[href="/config"]')).toBeVisible();
+
+    await page.setViewportSize({ width: 1800, height: 1100 });
+  });
+
+  test("authenticated pages stay structured and responsive", async () => {
+    test.setTimeout(60_000);
+
+    for (const viewport of [
+      { width: 1800, height: 1100 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      for (const path of authenticatedPagePaths) {
+        await page.goto(`${adminBaseURL}${path}`);
+        await expect(page.locator("#app-nav")).toBeVisible();
+        await expect(page.locator("h1")).toHaveCount(1);
+        const overflowingElements = await page.evaluate(() => {
+          const viewportWidth = document.documentElement.clientWidth;
+          if (document.documentElement.scrollWidth <= viewportWidth + 1) {
+            return [];
+          }
+          return [...document.querySelectorAll("body *")]
+            .filter((element) => {
+              const bounds = element.getBoundingClientRect();
+              return bounds.left < -1 || bounds.right > viewportWidth + 1;
+            })
+            .slice(0, 5)
+            .map((element) => `${element.tagName.toLowerCase()}.${element.className || "(no class)"}`);
+        });
+        expect(overflowingElements, `${path} overflows at ${viewport.width}px`).toEqual([]);
+      }
+    }
 
     await page.setViewportSize({ width: 1800, height: 1100 });
   });

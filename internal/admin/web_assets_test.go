@@ -40,16 +40,19 @@ func TestWebAssetsHaveNoExternalReferences(t *testing.T) {
 }
 
 func TestWebAssetsWireSharedNavigation(t *testing.T) {
-	authedPages := []string{
-		"index.html",
-		"config.html",
-		"rules.html",
-		"rulepacks.html",
-		"tls.html",
-		"tools.html",
-		"detector.html",
-		"logs.html",
-		"wizard.html",
+	var authedPages []string
+	err := fs.WalkDir(embeddedWeb, "web", func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || !strings.HasSuffix(path, ".html") || path == "web/login.html" || path == "web/setup.html" {
+			return nil
+		}
+		authedPages = append(authedPages, strings.TrimPrefix(path, "web/"))
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk embedded web assets: %v", err)
 	}
 
 	for _, name := range authedPages {

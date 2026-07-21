@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trust the CA on macOS · Sinkhole Responder</title>
   <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
 </head>
 <body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
   <main class="settings-shell help-shell">
     <a class="text-link back-link" href="/tls">← Back to TLS certificates</a>
     <article class="config-card guide-card">
@@ -20,5 +22,6 @@
       <code class="command-block">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ca.cert.pem</code>
     </article>
   </main>
+  <script type="module" src="/assets/nav.js"></script>
 </body>
 </html>
