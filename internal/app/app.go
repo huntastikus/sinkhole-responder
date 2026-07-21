@@ -14,15 +14,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/admin"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/httpserver"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/logbuf"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/mgmt"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rulepacks"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rules"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/tlsx"
+	"github.com/huntastikus/sinkhole-responder/internal/admin"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/httpserver"
+	"github.com/huntastikus/sinkhole-responder/internal/logbuf"
+	"github.com/huntastikus/sinkhole-responder/internal/mgmt"
+	"github.com/huntastikus/sinkhole-responder/internal/rulepacks"
+	"github.com/huntastikus/sinkhole-responder/internal/rules"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/tlsx"
 )
 
 // Option configures Run.

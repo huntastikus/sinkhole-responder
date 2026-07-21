@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rules"
+	"github.com/huntastikus/sinkhole-responder/internal/rules"
 )
 
 var overrideEnvironment = []string{

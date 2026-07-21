@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
 	"gopkg.in/yaml.v3"
 )
 

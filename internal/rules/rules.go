@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/assets"
+	"github.com/huntastikus/sinkhole-responder/internal/assets"
 	"golang.org/x/net/http/httpguts"
 )
 

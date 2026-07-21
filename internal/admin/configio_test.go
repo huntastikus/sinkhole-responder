@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rules"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/rules"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
 	"gopkg.in/yaml.v3"
 )
 

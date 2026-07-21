@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
 )
 
 // restartSignalDelay gives the 202 response time to reach the browser before the

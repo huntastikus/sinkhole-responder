@@ -11,7 +11,7 @@ advertising or tracking service.
 > behavior or override browser and application security. Read
 > [Honest limitations](#honest-limitations) before deployment.
 
-Module: `git.kopenczei.net/arpad/sinkhole-responder`
+Module: `github.com/huntastikus/sinkhole-responder`
 
 ## Contents
 

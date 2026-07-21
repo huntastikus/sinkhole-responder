@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rulepacks"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rules"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/rulepacks"
+	"github.com/huntastikus/sinkhole-responder/internal/rules"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
 )
 
 // ApplyConfig validates, persists, and reloads a proposed configuration.

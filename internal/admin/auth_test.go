@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
 )
 
 func TestHashPasswordVerifiesPassword(t *testing.T) {

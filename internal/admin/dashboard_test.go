@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
 )
 
 func TestDashboardAndAssetsAreServed(t *testing.T) {

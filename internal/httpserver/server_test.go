@@ -19,9 +19,9 @@ import (
 	"testing"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/mgmt"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rules"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/mgmt"
+	"github.com/huntastikus/sinkhole-responder/internal/rules"
 )
 
 func TestAllowedMethods(t *testing.T) {

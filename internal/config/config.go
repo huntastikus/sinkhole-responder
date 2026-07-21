@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rules"
+	"github.com/huntastikus/sinkhole-responder/internal/rules"
 	"gopkg.in/yaml.v3"
 )
 

@@ -10,10 +10,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/app"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/logbuf"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/tlsx"
+	"github.com/huntastikus/sinkhole-responder/internal/app"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/logbuf"
+	"github.com/huntastikus/sinkhole-responder/internal/tlsx"
 )
 
 var version = "dev"

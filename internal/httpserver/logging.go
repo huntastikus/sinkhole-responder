@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
 	"golang.org/x/net/idna"
 )
 

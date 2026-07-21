@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rulepacks"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/rulepacks"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
 )
 
 type healthStatus string

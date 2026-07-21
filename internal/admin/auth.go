@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
 )
 
 const (

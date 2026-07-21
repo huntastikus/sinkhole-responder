@@ -18,11 +18,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/logbuf"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/mgmt"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/tlsx"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/logbuf"
+	"github.com/huntastikus/sinkhole-responder/internal/mgmt"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/tlsx"
 	"golang.org/x/time/rate"
 )
 
