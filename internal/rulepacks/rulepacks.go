@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/assets"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rules"
+	"github.com/huntastikus/sinkhole-responder/internal/assets"
+	"github.com/huntastikus/sinkhole-responder/internal/rules"
 	"gopkg.in/yaml.v3"
 )
 

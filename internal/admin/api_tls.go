@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/tlsx"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/tlsx"
 )
 
 const (

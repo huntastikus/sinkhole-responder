@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
 )
 
 const sessionKeySize = 32
@@ -37,7 +37,22 @@ func LoadOrCreateSessionKey(d *state.Dir) ([]byte, error) {
 		return nil, fmt.Errorf("read session key: %w", err)
 	}
 
-	key = make([]byte, sessionKeySize)
+	key, err = rotateSessionKey(d)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
+}
+
+// RotateSessionKey replaces the session signing key so existing admin sessions
+// become invalid, for example after a configured password changes.
+func RotateSessionKey(d *state.Dir) error {
+	_, err := rotateSessionKey(d)
+	return err
+}
+
+func rotateSessionKey(d *state.Dir) ([]byte, error) {
+	key := make([]byte, sessionKeySize)
 	if _, err := rand.Read(key); err != nil {
 		return nil, fmt.Errorf("generate session key: %w", err)
 	}

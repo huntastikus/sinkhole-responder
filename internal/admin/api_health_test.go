@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/logbuf"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/logbuf"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
 )
 
 func TestSystemHealthGreen(t *testing.T) {

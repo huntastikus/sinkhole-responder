@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
 )
 
 const rulesAPITestYAML = `listen:

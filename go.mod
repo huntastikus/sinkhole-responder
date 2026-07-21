@@ -1,4 +1,4 @@
-module git.kopenczei.net/arpad/sinkhole-responder
+module github.com/huntastikus/sinkhole-responder
 
 go 1.26.5
 

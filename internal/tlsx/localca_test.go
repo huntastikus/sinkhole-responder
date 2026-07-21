@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/mgmt"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/mgmt"
 )
 
 func TestLocalCAConfigMintsVerifiedLeafAndWarns(t *testing.T) {

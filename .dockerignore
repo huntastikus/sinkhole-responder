@@ -8,7 +8,10 @@ dist
 coverage.out
 coverage/
 config.yaml
+.env
 data/
+certs/
+secrets/
 node_modules
 playwright/node_modules
 playwright/test-results/
@@ -22,4 +25,6 @@ ca/
 **/ca/
 *.pem
 *.key
+*.crt
+*.cer
 *.md

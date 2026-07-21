@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
 	"golang.org/x/net/idna"
 )
 
@@ -21,16 +21,17 @@ func (s *Server) finishRequest(recorder *statusRecorder, r *http.Request, info *
 	}
 	duration := time.Since(info.start)
 	s.metrics.ObserveRequest(info.kind, status, duration)
-	logAccess(s.accessLogger, info.state.cfg, r, info.rule, info.kind, status, duration)
+	logAccess(s.accessLogger, info.state.cfg, r, info.rule, info.kind, status, duration, info.requestBody)
 }
 
-func logAccess(logger *slog.Logger, cfg *config.Config, r *http.Request, rule, kind string, status int, duration time.Duration) {
+func logAccess(logger *slog.Logger, cfg *config.Config, r *http.Request, rule, kind string, status int, duration time.Duration, requestBody *requestBodyLog) {
 	if cfg != nil && cfg.Logging.AccessLog != nil && !*cfg.Logging.AccessLog {
 		return
 	}
 
-	attrs := make([]slog.Attr, 0, 8)
+	attrs := make([]slog.Attr, 0, 13)
 	attrs = append(attrs,
+		slog.String("method", r.Method),
 		slog.String("host", normalizedHost(r.Host)),
 		slog.String("path", requestPath(r)),
 	)
@@ -40,6 +41,7 @@ func logAccess(logger *slog.Logger, cfg *config.Config, r *http.Request, rule, k
 	if rule != "" {
 		attrs = append(attrs, slog.String("rule", rule))
 	}
+	attrs = append(attrs, requestBodyLogAttrs(requestBody)...)
 	attrs = append(attrs,
 		slog.String("kind", kind),
 		slog.Int("status", status),
@@ -54,6 +56,25 @@ func requestPath(r *http.Request) string {
 		return ""
 	}
 	return r.URL.Path
+}
+
+func requestBodyLogAttrs(body *requestBodyLog) []slog.Attr {
+	if body == nil {
+		return nil
+	}
+	attrs := make([]slog.Attr, 0, 3)
+	if body.omitted != "" {
+		attrs = append(attrs, slog.String("request_body_omitted", body.omitted))
+	} else {
+		attrs = append(attrs, slog.String("request_body", body.value))
+	}
+	if body.truncated {
+		attrs = append(attrs, slog.Bool("request_body_truncated", true))
+	}
+	if body.redacted {
+		attrs = append(attrs, slog.Bool("request_body_redacted", true))
+	}
+	return attrs
 }
 
 func normalizedHost(raw string) string {

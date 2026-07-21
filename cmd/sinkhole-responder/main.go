@@ -5,18 +5,22 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/app"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/logbuf"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/tlsx"
+	"github.com/huntastikus/sinkhole-responder/internal/app"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/logbuf"
+	"github.com/huntastikus/sinkhole-responder/internal/tlsx"
 )
 
 var version = "dev"
+
+const maxAdminPasswordFileBytes = 4 << 10
 
 func main() {
 	os.Exit(run())
@@ -45,6 +49,11 @@ func run() int {
 	cfg, err := config.Load(*configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "load configuration: %v\n", err)
+		return 1
+	}
+	adminPassword, adminPasswordConfigured, err := configuredAdminPassword()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "load admin password: %v\n", err)
 		return 1
 	}
 
@@ -82,14 +91,56 @@ func run() int {
 		}
 	}()
 
-	if err := app.Run(ctx, cfg, version, logger, logRing, reloadCh,
+	options := []app.Option{
 		app.WithConfigPath(*configPath),
 		app.WithLogLevel(&level),
-	); err != nil {
+	}
+	if adminPasswordConfigured {
+		options = append(options, app.WithAdminPassword(adminPassword))
+	}
+	if err := app.Run(ctx, cfg, version, logger, logRing, reloadCh, options...); err != nil {
 		logger.Error("sinkhole responder stopped", "error", err)
 		return 1
 	}
 	return 0
+}
+
+func configuredAdminPassword() (string, bool, error) {
+	password, passwordSet := os.LookupEnv("SINKHOLE_ADMIN_PASSWORD")
+	passwordFile, passwordFileSet := os.LookupEnv("SINKHOLE_ADMIN_PASSWORD_FILE")
+	if passwordSet && passwordFileSet {
+		return "", false, errors.New("SINKHOLE_ADMIN_PASSWORD and SINKHOLE_ADMIN_PASSWORD_FILE are mutually exclusive")
+	}
+	if passwordSet {
+		if password == "" {
+			return "", false, errors.New("SINKHOLE_ADMIN_PASSWORD must not be empty")
+		}
+		return password, true, nil
+	}
+	if !passwordFileSet {
+		return "", false, nil
+	}
+	if passwordFile == "" {
+		return "", false, errors.New("SINKHOLE_ADMIN_PASSWORD_FILE must not be empty")
+	}
+
+	file, err := os.Open(passwordFile)
+	if err != nil {
+		return "", false, fmt.Errorf("open password file: %w", err)
+	}
+	defer file.Close()
+	contents, err := io.ReadAll(io.LimitReader(file, maxAdminPasswordFileBytes+1))
+	if err != nil {
+		return "", false, fmt.Errorf("read password file: %w", err)
+	}
+	if len(contents) > maxAdminPasswordFileBytes {
+		return "", false, fmt.Errorf("password file exceeds %d bytes", maxAdminPasswordFileBytes)
+	}
+	password = strings.TrimRight(string(contents), "\r\n")
+	if password == "" {
+		return "", false, errors.New("password file must not be empty")
+	}
+	return password, true, nil
 }
 
 func runCreateCA(args []string) int {

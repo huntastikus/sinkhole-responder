@@ -6,10 +6,16 @@ coverage/
 
 # Runtime / generated
 config.yaml
+.env
+!.env.example
 data/
 ca/
+certs/
+secrets/
 *.pem
 *.key
+*.crt
+*.cer
 
 # Node / Playwright
 node_modules/

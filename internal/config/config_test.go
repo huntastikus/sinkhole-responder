@@ -8,17 +8,55 @@ import (
 	"testing"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rules"
+	"github.com/huntastikus/sinkhole-responder/internal/rules"
 )
 
 var overrideEnvironment = []string{
 	"SINKHOLE_LISTEN_HTTP",
 	"SINKHOLE_LISTEN_HTTPS",
+	"SINKHOLE_STATE_DIR",
+	"SINKHOLE_MANAGEMENT_ENABLED",
 	"SINKHOLE_MANAGEMENT_LISTEN",
+	"SINKHOLE_MANAGEMENT_ALLOW_EXTERNAL",
 	"SINKHOLE_TLS_MODE",
+	"SINKHOLE_TLS_CERT_FILE",
+	"SINKHOLE_TLS_KEY_FILE",
+	"SINKHOLE_TLS_HOSTS",
+	"SINKHOLE_CA_CERT_FILE",
+	"SINKHOLE_CA_KEY_FILE",
+	"SINKHOLE_CA_CACHE_SIZE",
+	"SINKHOLE_CA_LEAF_TTL",
+	"SINKHOLE_ADMIN_ENABLED",
+	"SINKHOLE_ADMIN_LISTEN",
+	"SINKHOLE_ADMIN_TLS_ENABLED",
+	"SINKHOLE_ADMIN_TLS_LISTEN",
+	"SINKHOLE_ADMIN_TLS_CERT_FILE",
+	"SINKHOLE_ADMIN_TLS_KEY_FILE",
+	"SINKHOLE_ADMIN_TLS_REDIRECT_HTTP",
+	"SINKHOLE_ADMIN_SESSION_TTL",
+	"SINKHOLE_ADMIN_LOGIN_RATE_PER_IP",
+	"SINKHOLE_ADMIN_LOGIN_BURST",
+	"SINKHOLE_RULEPACKS",
 	"SINKHOLE_DEFAULTS_STATUS",
+	"SINKHOLE_DEFAULTS_BEACON_STATUS",
+	"SINKHOLE_DEFAULTS_MEDIA_RESPONSE",
+	"SINKHOLE_DEFAULTS_CACHE_CONTROL",
+	"SINKHOLE_MAX_HEADER_BYTES",
+	"SINKHOLE_MAX_BODY_BYTES",
+	"SINKHOLE_READ_TIMEOUT",
+	"SINKHOLE_WRITE_TIMEOUT",
+	"SINKHOLE_IDLE_TIMEOUT",
+	"SINKHOLE_RATE_PER_IP",
+	"SINKHOLE_RATE_BURST",
 	"SINKHOLE_LOG_LEVEL",
 	"SINKHOLE_ACCESS_LOG",
+	"SINKHOLE_LOG_QUERY",
+	"SINKHOLE_LOG_REQUEST_BODY",
+	"SINKHOLE_REQUEST_BODY_METHODS",
+	"SINKHOLE_REQUEST_BODY_LOG_MAX_BYTES",
+	"SINKHOLE_ANONYMIZE_CLIENT",
+	"SINKHOLE_JSONP_ENABLED",
+	"SINKHOLE_JSONP_PARAM",
 }
 
 func TestLoadEmptyFileUsesDefaults(t *testing.T) {
@@ -65,9 +103,11 @@ func TestLoadEmptyFileUsesDefaults(t *testing.T) {
 			RateBurst:      50,
 		},
 		Logging: LoggingConfig{
-			Level:           "info",
-			AccessLog:       &accessLog,
-			AnonymizeClient: &anonymizeClient,
+			Level:                  "info",
+			AccessLog:              &accessLog,
+			RequestBodyMethods:     []string{"POST"},
+			RequestBodyLogMaxBytes: DefaultRequestBodyLogMaxBytes,
+			AnonymizeClient:        &anonymizeClient,
 		},
 		JSONP: JSONPConfig{Param: "callback"},
 		Admin: AdminConfig{
@@ -227,9 +267,48 @@ rules: []
 
 func TestEnvironmentOverridesYAML(t *testing.T) {
 	clearOverrides(t)
-	t.Setenv("SINKHOLE_DEFAULTS_STATUS", "204")
 	t.Setenv("SINKHOLE_LISTEN_HTTP", "127.0.0.1:8000, 127.0.0.1:8001")
+	t.Setenv("SINKHOLE_LISTEN_HTTPS", "127.0.0.1:4443")
+	t.Setenv("SINKHOLE_STATE_DIR", "/data/state")
+	t.Setenv("SINKHOLE_MANAGEMENT_ENABLED", "true")
+	t.Setenv("SINKHOLE_MANAGEMENT_LISTEN", "0.0.0.0:9191")
+	t.Setenv("SINKHOLE_MANAGEMENT_ALLOW_EXTERNAL", "true")
+	t.Setenv("SINKHOLE_TLS_MODE", "local-ca")
+	t.Setenv("SINKHOLE_CA_CERT_FILE", "/certs/ca.crt")
+	t.Setenv("SINKHOLE_CA_KEY_FILE", "/certs/ca.key")
+	t.Setenv("SINKHOLE_CA_CACHE_SIZE", "256")
+	t.Setenv("SINKHOLE_CA_LEAF_TTL", "12h")
+	t.Setenv("SINKHOLE_ADMIN_ENABLED", "true")
+	t.Setenv("SINKHOLE_ADMIN_LISTEN", "0.0.0.0:8181")
+	t.Setenv("SINKHOLE_ADMIN_TLS_ENABLED", "true")
+	t.Setenv("SINKHOLE_ADMIN_TLS_LISTEN", "0.0.0.0:8543")
+	t.Setenv("SINKHOLE_ADMIN_TLS_CERT_FILE", "/certs/admin.crt")
+	t.Setenv("SINKHOLE_ADMIN_TLS_KEY_FILE", "/certs/admin.key")
+	t.Setenv("SINKHOLE_ADMIN_TLS_REDIRECT_HTTP", "false")
+	t.Setenv("SINKHOLE_ADMIN_SESSION_TTL", "6h")
+	t.Setenv("SINKHOLE_ADMIN_LOGIN_RATE_PER_IP", "1.5")
+	t.Setenv("SINKHOLE_ADMIN_LOGIN_BURST", "8")
+	t.Setenv("SINKHOLE_RULEPACKS", "recommended, analytics")
+	t.Setenv("SINKHOLE_DEFAULTS_STATUS", "204")
+	t.Setenv("SINKHOLE_DEFAULTS_BEACON_STATUS", "202")
+	t.Setenv("SINKHOLE_DEFAULTS_MEDIA_RESPONSE", "asset")
+	t.Setenv("SINKHOLE_DEFAULTS_CACHE_CONTROL", "private, max-age=30")
+	t.Setenv("SINKHOLE_MAX_HEADER_BYTES", "8192")
+	t.Setenv("SINKHOLE_MAX_BODY_BYTES", "32768")
+	t.Setenv("SINKHOLE_READ_TIMEOUT", "4s")
+	t.Setenv("SINKHOLE_WRITE_TIMEOUT", "5s")
+	t.Setenv("SINKHOLE_IDLE_TIMEOUT", "30s")
+	t.Setenv("SINKHOLE_RATE_PER_IP", "12.5")
+	t.Setenv("SINKHOLE_RATE_BURST", "25")
+	t.Setenv("SINKHOLE_LOG_LEVEL", "debug")
 	t.Setenv("SINKHOLE_ACCESS_LOG", "false")
+	t.Setenv("SINKHOLE_LOG_QUERY", "true")
+	t.Setenv("SINKHOLE_LOG_REQUEST_BODY", "true")
+	t.Setenv("SINKHOLE_REQUEST_BODY_METHODS", "POST, PUT, PATCH, DELETE")
+	t.Setenv("SINKHOLE_REQUEST_BODY_LOG_MAX_BYTES", "2048")
+	t.Setenv("SINKHOLE_ANONYMIZE_CLIENT", "false")
+	t.Setenv("SINKHOLE_JSONP_ENABLED", "true")
+	t.Setenv("SINKHOLE_JSONP_PARAM", "cb")
 	path := writeConfig(t, `
 listen:
   http: ["0.0.0.0:9000"]
@@ -253,6 +332,120 @@ logging:
 	if cfg.Logging.AccessLog == nil || *cfg.Logging.AccessLog {
 		t.Errorf("Logging.AccessLog = %v, want false", cfg.Logging.AccessLog)
 	}
+	if !reflect.DeepEqual(cfg.Listen.HTTPS, []string{"127.0.0.1:4443"}) || cfg.StateDir != "/data/state" {
+		t.Errorf("HTTPS/state overrides = %v, %q", cfg.Listen.HTTPS, cfg.StateDir)
+	}
+	if cfg.Management.Enabled == nil || !*cfg.Management.Enabled || cfg.Management.Listen != "0.0.0.0:9191" || !cfg.Management.AllowExternal {
+		t.Errorf("Management = %#v, want enabled external listener", cfg.Management)
+	}
+	if cfg.TLS.LocalCA.CACert != "/certs/ca.crt" || cfg.TLS.LocalCA.CAKey != "/certs/ca.key" || cfg.TLS.LocalCA.CacheSize != 256 || cfg.TLS.LocalCA.LeafTTL != 12*time.Hour {
+		t.Errorf("TLS local CA = %#v", cfg.TLS.LocalCA)
+	}
+	if !cfg.Admin.Enabled || cfg.Admin.Listen != "0.0.0.0:8181" || !cfg.Admin.TLS.Enabled || cfg.Admin.TLS.Listen != "0.0.0.0:8543" || cfg.Admin.TLS.CertFile != "/certs/admin.crt" || cfg.Admin.TLS.KeyFile != "/certs/admin.key" || cfg.Admin.TLS.RedirectHTTP || cfg.Admin.SessionTTL != 6*time.Hour || cfg.Admin.LoginRatePerIP != 1.5 || cfg.Admin.LoginBurst != 8 {
+		t.Errorf("Admin = %#v", cfg.Admin)
+	}
+	if !reflect.DeepEqual(cfg.Rulepacks.Enabled, []string{"recommended", "analytics"}) {
+		t.Errorf("Rulepacks.Enabled = %v", cfg.Rulepacks.Enabled)
+	}
+	if cfg.Defaults.BeaconStatus != 202 || cfg.Defaults.MediaResponse != "asset" || cfg.Defaults.CacheControl != "private, max-age=30" {
+		t.Errorf("Defaults = %#v", cfg.Defaults)
+	}
+	if cfg.Limits.MaxHeaderBytes != 8192 || cfg.Limits.MaxBodyBytes != 32768 || cfg.Limits.ReadTimeout != 4*time.Second || cfg.Limits.WriteTimeout != 5*time.Second || cfg.Limits.IdleTimeout != 30*time.Second || cfg.Limits.RatePerIP != 12.5 || cfg.Limits.RateBurst != 25 {
+		t.Errorf("Limits = %#v", cfg.Limits)
+	}
+	if cfg.Logging.Level != "debug" || !cfg.Logging.LogQuery || !cfg.Logging.LogRequestBody || !reflect.DeepEqual(cfg.Logging.RequestBodyMethods, []string{"POST", "PUT", "PATCH", "DELETE"}) || cfg.Logging.RequestBodyLogMaxBytes != 2048 || cfg.Logging.AnonymizeClient == nil || *cfg.Logging.AnonymizeClient {
+		t.Errorf("Logging = %#v", cfg.Logging)
+	}
+	if !cfg.JSONP.Enabled || cfg.JSONP.Param != "cb" {
+		t.Errorf("JSONP = %#v", cfg.JSONP)
+	}
+}
+
+func TestEnvironmentConfiguresSingleStaticCertificate(t *testing.T) {
+	clearOverrides(t)
+	t.Setenv("SINKHOLE_TLS_MODE", "static")
+	t.Setenv("SINKHOLE_TLS_CERT_FILE", "/certs/responder.crt")
+	t.Setenv("SINKHOLE_TLS_KEY_FILE", "/certs/responder.key")
+	t.Setenv("SINKHOLE_TLS_HOSTS", "ads.example, *.tracker.example")
+
+	cfg, err := Load(writeConfig(t, ""))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	want := []CertPair{{
+		Hosts:    []string{"ads.example", "*.tracker.example"},
+		CertFile: "/certs/responder.crt",
+		KeyFile:  "/certs/responder.key",
+	}}
+	if !reflect.DeepEqual(cfg.TLS.Static.Certs, want) {
+		t.Fatalf("TLS.Static.Certs = %#v, want %#v", cfg.TLS.Static.Certs, want)
+	}
+}
+
+func TestEnvironmentRejectsIncompleteCertificatePairs(t *testing.T) {
+	tests := []struct {
+		name  string
+		env   string
+		value string
+	}{
+		{name: "static certificate", env: "SINKHOLE_TLS_CERT_FILE", value: "/certs/responder.crt"},
+		{name: "static hosts", env: "SINKHOLE_TLS_HOSTS", value: "ads.example"},
+		{name: "CA certificate", env: "SINKHOLE_CA_CERT_FILE", value: "/certs/ca.crt"},
+		{name: "admin certificate", env: "SINKHOLE_ADMIN_TLS_CERT_FILE", value: "/certs/admin.crt"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			clearOverrides(t)
+			t.Setenv(test.env, test.value)
+			if _, err := Load(writeConfig(t, "")); err == nil || !strings.Contains(err.Error(), "must be set together") {
+				t.Fatalf("Load() error = %v, want paired-certificate error", err)
+			}
+		})
+	}
+}
+
+func TestEnvironmentRejectsEmptyCertificatePairs(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		certEnv string
+		keyEnv  string
+	}{
+		{name: "static certificate", certEnv: "SINKHOLE_TLS_CERT_FILE", keyEnv: "SINKHOLE_TLS_KEY_FILE"},
+		{name: "CA certificate", certEnv: "SINKHOLE_CA_CERT_FILE", keyEnv: "SINKHOLE_CA_KEY_FILE"},
+		{name: "admin certificate", certEnv: "SINKHOLE_ADMIN_TLS_CERT_FILE", keyEnv: "SINKHOLE_ADMIN_TLS_KEY_FILE"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			clearOverrides(t)
+			t.Setenv(test.certEnv, "")
+			t.Setenv(test.keyEnv, "")
+			if _, err := Load(writeConfig(t, "")); err == nil || !strings.Contains(err.Error(), "must not be empty") {
+				t.Fatalf("Load() error = %v, want empty-certificate error", err)
+			}
+		})
+	}
+}
+
+func TestEnvironmentRejectsInvalidScalarValues(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		env   string
+		value string
+	}{
+		{name: "boolean", env: "SINKHOLE_ACCESS_LOG", value: "yes"},
+		{name: "integer", env: "SINKHOLE_DEFAULTS_STATUS", value: "two-hundred"},
+		{name: "64-bit integer", env: "SINKHOLE_MAX_BODY_BYTES", value: "large"},
+		{name: "floating point", env: "SINKHOLE_RATE_PER_IP", value: "fast"},
+		{name: "duration", env: "SINKHOLE_READ_TIMEOUT", value: "soon"},
+		{name: "request body log limit", env: "SINKHOLE_REQUEST_BODY_LOG_MAX_BYTES", value: "large"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			clearOverrides(t)
+			t.Setenv(test.env, test.value)
+			if _, err := Load(writeConfig(t, "")); err == nil || !strings.Contains(err.Error(), test.env) {
+				t.Fatalf("Load() error = %v, want error naming %s", err, test.env)
+			}
+		})
+	}
 }
 
 func TestLoadRejectsInvalidConfiguration(t *testing.T) {
@@ -266,6 +459,11 @@ func TestLoadRejectsInvalidConfiguration(t *testing.T) {
 		{name: "invalid TLS mode", yaml: "tls:\n  mode: tls\n", wantErr: "tls.mode"},
 		{name: "invalid media response", yaml: "defaults:\n  media_response: foo\n", wantErr: "defaults.media_response"},
 		{name: "invalid log level", yaml: "logging:\n  level: trace\n", wantErr: "logging.level"},
+		{name: "enabled request body log without capture bytes", yaml: "logging:\n  log_request_body: true\n  request_body_log_max_bytes: 0\n", wantErr: "logging.request_body_log_max_bytes"},
+		{name: "request body log cap too large", yaml: "logging:\n  request_body_log_max_bytes: 65537\n", wantErr: "logging.request_body_log_max_bytes"},
+		{name: "enabled request body log without methods", yaml: "logging:\n  log_request_body: true\n  request_body_methods: []\n", wantErr: "logging.request_body_methods"},
+		{name: "unsupported request body method", yaml: "logging:\n  request_body_methods: [GET]\n", wantErr: "unsupported method"},
+		{name: "duplicate request body method", yaml: "logging:\n  request_body_methods: [POST, post]\n", wantErr: "duplicate method"},
 		{name: "HTTPS with TLS disabled", yaml: "listen:\n  https: [\":8443\"]\ntls:\n  mode: disabled\n", wantErr: "listen.https"},
 		{name: "static TLS without certs", yaml: "tls:\n  mode: static\nlisten:\n  https: [\":8443\"]\n", wantErr: "tls.static.certs"},
 		{name: "local CA zero cache", yaml: localCATestYAML("    cache_size: 0\n"), wantErr: "cache_size"},

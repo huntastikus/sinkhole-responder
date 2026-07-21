@@ -18,23 +18,33 @@ import (
 	"sync/atomic"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/logbuf"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/mgmt"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/tlsx"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/logbuf"
+	"github.com/huntastikus/sinkhole-responder/internal/mgmt"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/tlsx"
 	"golang.org/x/time/rate"
 )
 
 const (
-	contentSecurityPolicy = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
-	adminShutdownTimeout  = 5 * time.Second
-	systemHealthBanner    = `<section id="system-health-banner" class="system-health-banner" role="status" aria-live="polite" aria-atomic="true" hidden>
-    <div class="system-health-overall">
-      <span id="system-health-dot" class="system-health-dot" aria-hidden="true"></span>
-      <strong>System <span id="system-health-overall">checking</span></strong>
+	contentSecurityPolicy  = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+	adminReadHeaderTimeout = 5 * time.Second
+	adminReadTimeout       = 15 * time.Second
+	adminWriteTimeout      = 30 * time.Second
+	adminIdleTimeout       = 60 * time.Second
+	adminShutdownTimeout   = 5 * time.Second
+	adminMaxHeaderBytes    = 16 * 1024
+	faviconLink            = `<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">`
+	systemHealthAlert      = `<section id="system-health-alert" class="system-health-alert" aria-atomic="true" hidden>
+    <div class="system-health-alert-heading">
+      <span id="system-health-alert-dot" class="system-health-dot" aria-hidden="true"></span>
+      <div>
+        <strong id="system-health-alert-title">System needs attention</strong>
+        <p id="system-health-alert-summary"></p>
+      </div>
     </div>
-    <ul id="system-health-checks" class="system-health-checks" aria-label="System health checks"></ul>
+    <ul id="system-health-alert-checks" class="system-health-alert-checks" aria-label="System health issues"></ul>
+    <a class="system-health-alert-action" href="/logs">View logs</a>
   </section>`
 	systemHealthScript = `<script type="module" src="/assets/status.js"></script>`
 )
@@ -191,10 +201,8 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 
 	running := []runningServer{{
-		name: "HTTP",
-		server: &http.Server{
-			Handler: s.httpHandler(adminConfig),
-		},
+		name:     "HTTP",
+		server:   newAdminHTTPServer(s.httpHandler(adminConfig)),
 		listener: httpListener,
 	}}
 	if adminConfig.TLS.Enabled {
@@ -208,12 +216,11 @@ func (s *Server) Serve(ctx context.Context) error {
 			_ = httpListener.Close()
 			return fmt.Errorf("bind admin HTTPS listener: %w", err)
 		}
+		httpsServer := newAdminHTTPServer(s.Handler())
+		httpsServer.TLSConfig = tlsConfig
 		running = append(running, runningServer{
-			name: "HTTPS",
-			server: &http.Server{
-				Handler:   s.Handler(),
-				TLSConfig: tlsConfig,
-			},
+			name:     "HTTPS",
+			server:   httpsServer,
 			listener: tls.NewListener(tcpListener, tlsConfig),
 		})
 	}
@@ -255,6 +262,17 @@ type runningServer struct {
 	listener net.Listener
 }
 
+func newAdminHTTPServer(handler http.Handler) *http.Server {
+	return &http.Server{
+		Handler:           handler,
+		ReadHeaderTimeout: adminReadHeaderTimeout,
+		ReadTimeout:       adminReadTimeout,
+		WriteTimeout:      adminWriteTimeout,
+		IdleTimeout:       adminIdleTimeout,
+		MaxHeaderBytes:    adminMaxHeaderBytes,
+	}
+}
+
 func (s *Server) page(name string) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		s.serveWebPage(w, name)
@@ -264,7 +282,7 @@ func (s *Server) page(name string) http.HandlerFunc {
 func assetsHandler(web fs.FS) http.Handler {
 	files := http.StripPrefix("/assets/", http.FileServerFS(web))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasSuffix(r.URL.Path, ".js") && !strings.HasSuffix(r.URL.Path, ".css") {
+		if !strings.HasSuffix(r.URL.Path, ".js") && !strings.HasSuffix(r.URL.Path, ".css") && !strings.HasSuffix(r.URL.Path, ".svg") {
 			http.NotFound(w, r)
 			return
 		}
@@ -280,7 +298,13 @@ func (s *Server) serveWebPage(w http.ResponseWriter, name string) {
 		return
 	}
 	footer := `<footer class="app-footer"><span>` + template.HTMLEscapeString(s.displayVersion) + `</span></footer>`
-	html := strings.Replace(string(page), "<body>", "<body class=\"admin-body\">\n  "+systemHealthBanner, 1)
+	html := strings.Replace(string(page), "</head>", "  "+faviconLink+"\n</head>", 1)
+	html = strings.Replace(html, "<body>", "<body class=\"admin-body\">", 1)
+	if strings.Contains(html, "</nav>") {
+		html = strings.Replace(html, "</nav>", "</nav>\n  "+systemHealthAlert, 1)
+	} else {
+		html = strings.Replace(html, "<body class=\"admin-body\">", "<body class=\"admin-body\">\n  "+systemHealthAlert, 1)
+	}
 	html = strings.Replace(html, "</body>", "  "+footer+"\n  "+systemHealthScript+"\n</body>", 1)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(html))

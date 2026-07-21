@@ -193,6 +193,13 @@ function populateForm(config) {
       input.value = value ?? "";
     }
   }
+  const requestBodyMethods = new Set(
+    (Array.isArray(config.logging?.request_body_methods) ? config.logging.request_body_methods : [])
+      .map((method) => String(method).toUpperCase()),
+  );
+  for (const input of document.querySelectorAll("[data-request-body-method]")) {
+    input.checked = requestBodyMethods.has(input.value);
+  }
   renderListeners("http", Array.isArray(config.listen?.http) ? config.listen.http : []);
   renderListeners("https", Array.isArray(config.listen?.https) ? config.listen.https : []);
   renderStaticCerts(Array.isArray(config.tls?.static?.certs) ? config.tls.static.certs : []);
@@ -213,6 +220,11 @@ function writeFormToConfig() {
   setByPath(currentConfig, "listen.http", collectListeners("http"));
   setByPath(currentConfig, "listen.https", collectListeners("https"));
   setByPath(currentConfig, "tls.static.certs", collectStaticCerts());
+  setByPath(
+    currentConfig,
+    "logging.request_body_methods",
+    [...document.querySelectorAll("[data-request-body-method]:checked")].map((input) => input.value),
+  );
 }
 
 function updateTLSVisibility() {
@@ -340,6 +352,20 @@ function validateForm() {
   const loginBurst = document.getElementById("admin-login-burst");
   if (loginRate > 0 && Number(loginBurst.value) < 1) {
     invalidate(loginBurst, "Use a burst of at least one when login limiting is enabled.");
+  }
+
+  const requestBodyLogMax = document.getElementById("logging-request-body-max");
+  const requestBodyLogMaxValue = Number(requestBodyLogMax.value);
+  if (!Number.isInteger(requestBodyLogMaxValue) || requestBodyLogMaxValue < 1 || requestBodyLogMaxValue > 65536) {
+    invalidate(requestBodyLogMax, "Enter a byte limit from 1 through 65536.");
+  }
+  const requestBodyMethods = [...document.querySelectorAll("[data-request-body-method]")];
+  if (document.getElementById("logging-request-body").checked && !requestBodyMethods.some((input) => input.checked)) {
+    for (const input of requestBodyMethods) {
+      input.setAttribute("aria-invalid", "true");
+    }
+    document.getElementById("logging-request-body-methods-error").textContent = "Select at least one method when request body logging is enabled.";
+    valid = false;
   }
 
   const adminCert = document.getElementById("admin-tls-cert");

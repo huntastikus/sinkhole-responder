@@ -82,12 +82,22 @@ body {
 }
 
 .app-nav-brand {
+  display: inline-flex;
   flex: 0 0 auto;
+  align-items: center;
+  gap: 0.55rem;
   color: var(--text);
   font-size: 0.84rem;
   font-weight: 800;
   letter-spacing: -0.015em;
   white-space: nowrap;
+}
+
+.app-nav-logo {
+  display: block;
+  width: 2.1rem;
+  height: 2.1rem;
+  flex: 0 0 auto;
 }
 
 .app-nav-panel {
@@ -140,6 +150,11 @@ body {
   gap: 0.4rem;
 }
 
+.app-nav-health {
+  position: relative;
+  flex: 0 0 auto;
+}
+
 .app-nav-action,
 .app-nav-menu-button {
   min-height: 2.25rem;
@@ -168,6 +183,49 @@ body {
   color: var(--danger-text);
 }
 
+.app-nav-health-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-color: color-mix(in srgb, var(--health-color, var(--muted)) 36%, var(--border));
+  background: color-mix(in srgb, var(--health-color, var(--muted)) 8%, var(--surface-raised));
+  color: var(--health-color, var(--muted));
+  white-space: nowrap;
+}
+
+.app-nav-health-button:hover:not(:disabled) {
+  border-color: var(--health-color, var(--accent));
+  color: var(--health-color, var(--accent));
+}
+
+.app-nav-health-panel {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  z-index: 120;
+  width: min(25rem, calc(100vw - 2rem));
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface-raised);
+  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.28);
+}
+
+.app-nav-health-panel-header {
+  display: flex;
+  margin-bottom: 0.65rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.76rem;
+}
+
+.app-nav-health-panel-header > span {
+  color: var(--health-color, var(--muted));
+  font-weight: 750;
+  text-transform: capitalize;
+}
+
 .app-nav-menu-button {
   display: none;
   margin-left: auto;
@@ -182,7 +240,8 @@ body {
   text-align: center;
 }
 
-@media (max-width: 58rem) {
+/* Collapse before the full navigation, branding, and actions can wrap. */
+@media (max-width: 100rem) {
   .app-nav-inner {
     min-height: 3.6rem;
     flex-wrap: wrap;
@@ -190,8 +249,13 @@ body {
 
   .app-nav-menu-button {
     display: inline-flex;
+    margin-left: 0;
     align-items: center;
     justify-content: center;
+  }
+
+  .app-nav-health {
+    margin-left: auto;
   }
 
   .app-nav-panel {
@@ -223,6 +287,30 @@ body {
     padding-top: 0.75rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     border-top: 1px solid var(--border);
+  }
+
+  .app-nav-health-panel {
+    position: fixed;
+    top: 4.2rem;
+    right: 1rem;
+    width: min(25rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 5.2rem);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 32rem) {
+  .app-nav-inner {
+    gap: 0.55rem;
+  }
+
+  .app-nav-brand-name {
+    display: none;
+  }
+
+  .app-nav-health-button,
+  .app-nav-menu-button {
+    padding-inline: 0.55rem;
   }
 }
 
@@ -302,35 +390,36 @@ h1 {
   font-weight: 600;
 }
 
-.system-health-banner {
+.system-health-alert {
   display: flex;
   width: min(78rem, calc(100% - 2rem));
   min-width: 0;
-  margin: 1rem auto 0;
-  padding: 0.55rem 0.7rem;
+  margin: 0.8rem auto 0;
+  padding: 0.75rem 0.85rem;
   align-items: center;
-  gap: 0.65rem;
-  border: 1px solid var(--border);
+  gap: 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--health-color) 42%, var(--border));
   border-radius: 0.75rem;
-  background: var(--card-bg);
+  background: color-mix(in srgb, var(--health-color) 9%, var(--card-bg));
   box-shadow: var(--shadow);
-  font-size: 0.74rem;
+  color: var(--health-color);
+  font-size: 0.78rem;
 }
 
-.system-health-overall,
-.system-health-check {
+.system-health-alert-heading {
   display: inline-flex;
   min-width: 0;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.55rem;
 }
 
-.system-health-overall {
+.system-health-alert-heading {
   flex: 0 0 auto;
-  padding: 0.35rem 0.5rem;
-  border-radius: 999px;
-  color: var(--health-color, var(--muted));
-  text-transform: capitalize;
+}
+
+.system-health-alert-heading p {
+  margin: 0.18rem 0 0;
+  color: var(--muted);
 }
 
 .system-health-dot {
@@ -341,32 +430,72 @@ h1 {
   box-shadow: 0 0 0 0.18rem color-mix(in srgb, currentColor 14%, transparent);
 }
 
-.system-health-checks {
+.system-health-panel-checks,
+.system-health-alert-checks {
   display: flex;
   min-width: 0;
   margin: 0;
   padding: 0;
-  flex: 1;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  flex-direction: column;
+  gap: 0.35rem;
   list-style: none;
 }
 
-.system-health-check {
-  max-width: 100%;
-  padding: 0.3rem 0.55rem;
-  border: 1px solid color-mix(in srgb, var(--health-color) 34%, var(--border));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--health-color) 8%, var(--card-bg));
+.system-health-alert-checks {
+  flex: 1;
+}
+
+.system-health-panel-check,
+.system-health-alert-check {
+  display: flex;
+  min-width: 0;
+  padding: 0.5rem 0.55rem;
+  align-items: flex-start;
+  gap: 0.55rem;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--health-color) 7%, transparent);
+}
+
+.system-health-alert-check {
+  padding: 0.35rem 0.5rem;
+}
+
+.system-health-check-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-top: 0.28rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--health-color);
+}
+
+.system-health-check-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
   color: var(--health-color);
+  line-height: 1.3;
 }
 
 .system-health-check-detail {
   min-width: 0;
-  overflow: hidden;
   color: var(--muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+.system-health-alert-action {
+  flex: 0 0 auto;
+  padding: 0.42rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--health-color) 38%, var(--border));
+  border-radius: 0.5rem;
+  color: var(--health-color);
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.system-health-alert-action:hover {
+  border-color: var(--health-color);
+  background: color-mix(in srgb, var(--health-color) 8%, transparent);
 }
 
 .health-green {
@@ -855,6 +984,37 @@ select[aria-invalid="true"] {
 .field-toggle .field-help,
 .field-toggle .field-error {
   grid-column: 2;
+}
+
+.field-toggle > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.request-body-methods {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+}
+
+.request-body-methods > legend {
+  padding: 0 0.3rem;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.request-body-method-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 0.6rem;
+}
+
+.request-body-methods .field-error {
+  display: block;
 }
 
 .listener-columns {
@@ -1903,6 +2063,56 @@ input[type="file"] {
   width: min(52rem, 100%);
 }
 
+.help-center-shell {
+  width: min(82rem, 100%);
+}
+
+.help-center-header {
+  max-width: 48rem;
+  margin-bottom: 1.5rem;
+}
+
+.help-center-header h1 {
+  margin: 0.2rem 0 0.65rem;
+}
+
+.help-center-header > p:last-child,
+.help-center-section > p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.help-center-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.help-center-section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.help-center-section h2 {
+  margin: 0.15rem 0 0.3rem;
+  font-size: 1.2rem;
+}
+
+.help-center-links {
+  display: grid;
+  margin-top: auto;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.help-center-trust {
+  grid-column: 1 / -1;
+}
+
+.help-center-trust-links {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
 .back-link {
   display: inline-block;
   margin-bottom: 1rem;
@@ -1919,6 +2129,23 @@ input[type="file"] {
 
 .guide-card a {
   overflow-wrap: anywhere;
+}
+
+.guide-download {
+  display: flex;
+  margin: 1rem 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.7rem 1rem;
+}
+
+.guide-download .button {
+  text-decoration: none;
+}
+
+.guide-download small {
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .guide-steps {
@@ -1953,9 +2180,14 @@ input[type="file"] {
 }
 
 @media (max-width: 46rem) {
-  .system-health-banner {
+  .system-health-alert {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .system-health-alert-action {
+    width: 100%;
+    text-align: center;
   }
 
   .tls-layout,
@@ -1976,6 +2208,16 @@ input[type="file"] {
 
   .result-actions .button {
     width: 100%;
+  }
+}
+
+@media (max-width: 64rem) {
+  .help-center-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .help-center-trust {
+    grid-column: auto;
   }
 }
 
@@ -2015,57 +2257,20 @@ input[type="file"] {
 .auth-lockup {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.8rem;
   margin-bottom: 1.5rem;
 }
 
 .auth-mark {
-  position: relative;
-  width: 2.1rem;
-  height: 2.1rem;
+  display: block;
+  width: 3.3rem;
+  height: 3.3rem;
   flex: 0 0 auto;
-}
-
-.auth-core {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0.5rem;
-  height: 0.5rem;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.auth-ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 2.1rem;
-  height: 2.1rem;
-  border: 1.25px solid var(--accent);
-  border-radius: 50%;
-}
-
-/* resting identity mark: three rings nested toward the core */
-.auth-ring:nth-child(1) {
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 0.24;
-}
-
-.auth-ring:nth-child(2) {
-  transform: translate(-50%, -50%) scale(0.66);
-  opacity: 0.42;
-}
-
-.auth-ring:nth-child(3) {
-  transform: translate(-50%, -50%) scale(0.33);
-  opacity: 0.62;
 }
 
 .auth-wordmark {
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: -0.01em;
 }

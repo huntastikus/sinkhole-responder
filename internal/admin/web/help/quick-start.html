@@ -20,9 +20,9 @@
       <ol class="guide-steps">
         <li><strong>Enable the admin GUI.</strong> Set <code>admin.enabled: true</code>. The supplied container configuration already enables it on first start.</li>
         <li><strong>Create the admin password.</strong> Open <code>http://RESPONDER_IP:8080</code>. A new installation sends you to the password setup page.</li>
-        <li><strong>Run the <a class="text-link" href="/wizard">setup wizard</a>.</strong> Choose a stable LAN address that your AdGuard Home clients can reach. Start with HTTP unless you deliberately need sinkholed HTTPS.</li>
+        <li><strong>Run the <a class="text-link" href="/wizard">setup wizard</a>.</strong> Choose a stable LAN address that clients using your DNS sinkhole can reach. Start with HTTP unless you deliberately need sinkholed HTTPS.</li>
         <li><strong>Enable recommended protection.</strong> The wizard can turn on the curated <code>recommended</code> rulepack for you.</li>
-        <li><strong>Point AdGuard Home here.</strong> Copy the Custom IP values shown by the wizard into AdGuard Home. See the <a class="text-link" href="/help/adguard-home">AdGuard Home setup guide</a> for the exact fields.</li>
+        <li><strong>Point blocked DNS names here.</strong> Configure AdGuard Home, Pi-hole, or another compatible DNS sinkhole to return this responder's address. See the <a class="text-link" href="/help/adguard-home">DNS sinkhole setup guide</a>.</li>
         <li><strong>Verify.</strong> Load a blocked resource, then check that the dashboard request counter increases. The <a class="text-link" href="/tools">Tools page</a> can preview which response a host and path would receive.</li>
       </ol>
 

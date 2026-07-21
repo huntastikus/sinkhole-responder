@@ -52,6 +52,78 @@ function createLink(label, href) {
   return link;
 }
 
+function createHealthControl() {
+  const control = document.createElement("div");
+  control.className = "app-nav-health";
+
+  const button = document.createElement("button");
+  button.id = "system-health-button";
+  button.className = "app-nav-action app-nav-health-button";
+  button.type = "button";
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-controls", "system-health-panel");
+  button.setAttribute("aria-label", "System health checking. View details");
+
+  const dot = document.createElement("span");
+  dot.id = "system-health-nav-dot";
+  dot.className = "system-health-dot";
+  dot.setAttribute("aria-hidden", "true");
+
+  const label = document.createElement("span");
+  label.id = "system-health-nav-label";
+  label.textContent = "System checking";
+  button.append(dot, label);
+
+  const healthPanel = document.createElement("section");
+  healthPanel.id = "system-health-panel";
+  healthPanel.className = "app-nav-health-panel";
+  healthPanel.setAttribute("aria-labelledby", "system-health-panel-title");
+  healthPanel.hidden = true;
+
+  const panelHeader = document.createElement("div");
+  panelHeader.className = "app-nav-health-panel-header";
+  const panelTitle = document.createElement("strong");
+  panelTitle.id = "system-health-panel-title";
+  panelTitle.textContent = "System health";
+  const panelStatus = document.createElement("span");
+  panelStatus.id = "system-health-panel-status";
+  panelStatus.textContent = "Checking…";
+  panelHeader.append(panelTitle, panelStatus);
+
+  const checks = document.createElement("ul");
+  checks.id = "system-health-checks";
+  checks.className = "system-health-panel-checks";
+  checks.setAttribute("aria-label", "System health checks");
+  healthPanel.append(panelHeader, checks);
+
+  function closeHealthPanel({ focus = false } = {}) {
+    healthPanel.hidden = true;
+    button.setAttribute("aria-expanded", "false");
+    if (focus) {
+      button.focus();
+    }
+  }
+
+  button.addEventListener("click", () => {
+    const open = healthPanel.hidden;
+    healthPanel.hidden = !open;
+    button.setAttribute("aria-expanded", String(open));
+  });
+  control.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !healthPanel.hidden) {
+      closeHealthPanel({ focus: true });
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (!healthPanel.hidden && !control.contains(event.target)) {
+      closeHealthPanel();
+    }
+  });
+
+  control.append(button, healthPanel);
+  return control;
+}
+
 function reloadWhenBack(status) {
   const attempt = () => {
     window
@@ -150,7 +222,17 @@ function main() {
 
   const brand = document.createElement("span");
   brand.className = "app-nav-brand";
-  brand.textContent = "Sinkhole Responder";
+  const brandLogo = document.createElement("img");
+  brandLogo.className = "app-nav-logo";
+  brandLogo.src = "/assets/logo.svg";
+  brandLogo.alt = "";
+  brandLogo.width = 34;
+  brandLogo.height = 34;
+  brandLogo.setAttribute("aria-hidden", "true");
+  const brandName = document.createElement("span");
+  brandName.className = "app-nav-brand-name";
+  brandName.textContent = "Sinkhole Responder";
+  brand.append(brandLogo, brandName);
 
   const menuButton = document.createElement("button");
   menuButton.className = "app-nav-menu-button";
@@ -171,6 +253,8 @@ function main() {
 
   const actions = document.createElement("div");
   actions.className = "app-nav-actions";
+
+  const healthControl = createHealthControl();
 
   const themeButton = document.createElement("button");
   themeButton.className = "app-nav-action";
@@ -221,6 +305,16 @@ function main() {
   });
   links.addEventListener("click", closeMenu);
 
+  const collapsedNavigation = window.matchMedia("(max-width: 100rem)");
+  function placeHealthControl() {
+    if (collapsedNavigation.matches) {
+      inner.insertBefore(healthControl, menuButton);
+    } else {
+      actions.prepend(healthControl);
+    }
+  }
+  collapsedNavigation.addEventListener("change", placeHealthControl);
+
   const scheme = window.matchMedia("(prefers-color-scheme: dark)");
   scheme.addEventListener("change", () => {
     if (!document.documentElement.dataset.theme) {
@@ -231,7 +325,9 @@ function main() {
   actions.append(themeButton, logoutButton);
   panel.append(links, actions);
   inner.append(brand, menuButton, panel);
+  placeHealthControl();
   nav.append(inner);
+  document.dispatchEvent(new CustomEvent("sinkhole:nav-ready"));
   void syncRestartBar(nav);
   // Re-check after a save elsewhere in the app, and when the tab regains focus.
   window.addEventListener("sinkhole:restart-check", () => void syncRestartBar(nav));

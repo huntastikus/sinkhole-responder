@@ -6,10 +6,10 @@ import (
 	"net"
 	"net/http"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/respond"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rulepacks"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rules"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/respond"
+	"github.com/huntastikus/sinkhole-responder/internal/rulepacks"
+	"github.com/huntastikus/sinkhole-responder/internal/rules"
 )
 
 type testDomainRequest struct {

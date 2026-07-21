@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rulepacks"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/rulepacks"
 )
 
 type rulepackResponse struct {

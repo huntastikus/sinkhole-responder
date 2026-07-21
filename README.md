@@ -1,7 +1,7 @@
 # Sinkhole Responder
 
-Sinkhole Responder pairs with AdGuard Home's **Custom IP** blocking mode. When a
-blocked domain resolves to a dedicated responder address, it returns tiny,
+Sinkhole Responder works with AdGuard Home, Pi-hole, or any DNS sinkhole that
+can return a dedicated responder address for blocked names. It returns tiny,
 syntactically valid, harmless HTTP placeholders so pages are less likely to
 break and simple resource-load checks can complete without contacting the real
 advertising or tracking service.
@@ -11,7 +11,7 @@ advertising or tracking service.
 > behavior or override browser and application security. Read
 > [Honest limitations](#honest-limitations) before deployment.
 
-Module: `git.kopenczei.net/arpad/sinkhole-responder`
+Module: `github.com/huntastikus/sinkhole-responder`
 
 ## Contents
 
@@ -25,7 +25,7 @@ Module: `git.kopenczei.net/arpad/sinkhole-responder`
   - [Rulepacks](#rulepacks)
   - [Certificate manager](#certificate-manager)
   - [Detector, tools, logs, and health](#detector-tools-logs-and-health)
-- [AdGuard Home configuration](#adguard-home-configuration)
+- [DNS sinkhole configuration](#dns-sinkhole-configuration)
 - [Dedicated address guidance](#dedicated-address-guidance)
 - [Verification commands](#verification-commands)
 - [HTTPS: what DNS redirection cannot solve](#https-what-dns-redirection-cannot-solve)
@@ -45,7 +45,7 @@ Module: `git.kopenczei.net/arpad/sinkhole-responder`
 Client requests a blocked hostname
             |
             v
-AdGuard Home DNS filtering (Blocking mode: Custom IP)
+DNS sinkhole (AdGuard Home, Pi-hole, or compatible resolver)
             |
             | returns the responder's static LAN IPv4/IPv6
             v
@@ -93,7 +93,7 @@ The v2 appliance has three separate listener planes:
 
 | Plane | Default | Purpose |
 | --- | --- | --- |
-| Data responder | `0.0.0.0:80`; `0.0.0.0:443` when TLS is enabled | Receives requests for domains that AdGuard Home redirected here. |
+| Data responder | `0.0.0.0:80`; `0.0.0.0:443` when TLS is enabled | Receives requests for blocked names that the DNS sinkhole redirected here. |
 | Admin GUI | `0.0.0.0:8080`; HTTPS on `0.0.0.0:8443` (on by default) | Setup, configuration, rules, certificates, and troubleshooting. |
 | Metrics / management | `127.0.0.1:9090` | Prometheus metrics and the health endpoint; loopback-only by default. |
 
@@ -104,8 +104,8 @@ systemd deployments grant only that capability.
 Docker Compose is the easiest first run:
 
 ```sh
-mkdir -p data
-docker compose up --build -d
+mkdir -p data certs secrets
+docker compose up -d
 ```
 
 On Linux, make `./data` writable by numeric UID/GID `65532` before starting if
@@ -120,8 +120,8 @@ curl -i --resolve blocked.example:80:127.0.0.1 http://blocked.example/banner.js
 ```
 
 This tests data port `80`; port `8080` is only the admin GUI. The Compose file
-publishes data `80`/`443` and admin `8080`/`8443`, while intentionally leaving
-management port `9090` unpublished. Stop it with `docker compose down`.
+publishes data `80`/`443`, admin `8080`/`8443`, and management `9090` on host
+loopback only. Stop it with `docker compose down`.
 
 ## Admin GUI
 
@@ -137,7 +137,7 @@ to the first-run wizard at `/wizard`. Later visits require that password.
 
 **1. Welcome — choose the responder address.** The wizard detects LAN
 addresses on the host and lets you pick one or enter it manually. Choose the
-stable address that AdGuard Home clients can reach.
+stable address that DNS clients can reach.
 
 **2. Access mode — choose HTTP or HTTPS.** HTTP-only is simpler and needs no
 client trust changes. HTTPS covers sinkholed HTTPS URLs too, but each client
@@ -153,9 +153,10 @@ download.
 safe-default bundle of harmless stubs for common adblock-detection libraries.
 Your own response rules remain first in the evaluation order.
 
-**5. AdGuard Home — copy the exact settings.** The wizard prints the Custom-IP
-steps and a ready-to-copy `AdGuardHome.yaml` fragment for the LAN address you
-selected. It never connects to or modifies AdGuard Home itself.
+**5. DNS sinkhole — point blocked names here.** The wizard explains the DNS
+requirement and prints ready-to-copy AdGuard Home Custom-IP settings for the
+selected LAN address. The Help center also covers Pi-hole and other compatible
+resolvers. Sinkhole Responder never connects to or modifies the DNS service.
 
 **6. Done — verify the result.** Review the chosen address, access mode, CA,
 and recommended protection, then continue to the dashboard, rules editor, or
@@ -215,7 +216,7 @@ admin GUI and include the platform-specific trust-store steps.
 The detector at `/tools/detector` checks the active rule configuration by
 previewing known ad-network requests through the responder's decision engine.
 It is a same-origin configuration check: it proves which stubs the current
-rules would select, but it does not prove that a client used AdGuard Home DNS
+rules would select, but it does not prove that a client used the intended DNS
 or trusts the local CA. For the complete live path, serve or open
 `web/detector.html?base=https://responder-address` on the client being tested.
 That standalone page makes real requests and distinguishes sinkholed,
@@ -223,16 +224,22 @@ not-blocked, unreachable, and skipped results.
 
 The `/tools` page includes **Test a domain**, a network-free dry run showing
 the response a host and path would receive, plus an **AdGuard Home config**
-generator that prints Custom-IP instructions and YAML. `/logs` shows recent
+generator for users of that resolver. `/logs` shows recent
 redacted in-memory logs with a minimum-level filter, record limit, and optional
 three-second refresh. The system-health banner reports listeners, TLS,
 state-directory writability, recent errors, and rulepack status with colored
 health pills.
 
-## AdGuard Home configuration
+## DNS sinkhole configuration
 
-Give the responder a stable, dedicated address first, then configure AdGuard
-Home as follows:
+Give the responder a stable, dedicated address first. The DNS service must
+return that address in blocked-name A and, when configured, AAAA responses;
+NXDOMAIN, NODATA, null-address, or REFUSED blocking modes do not send traffic
+to Sinkhole Responder.
+
+### AdGuard Home
+
+Configure AdGuard Home as follows:
 
 1. Open **Settings → DNS settings**.
 2. Set **Blocking mode** to **Custom IP**.
@@ -248,15 +255,37 @@ Home as follows:
 7. Confirm the browser's Secure DNS / DNS-over-HTTPS setting is not bypassing
    AdGuard Home. Also check operating-system and VPN DNS settings.
 
-AdGuard Home changes DNS answers; it does not rewrite destination ports. The
-responder therefore must be reachable on port `80` for ordinary `http://`
-URLs and, if HTTPS is deliberately enabled, on port `443`.
+### Pi-hole
+
+Pi-hole's recommended default `NULL` mode does not route blocked requests to
+the responder. Select `IP` blocking mode and force the responder address:
+
+```sh
+sudo pihole-FTL --config dns.blocking.mode IP
+sudo pihole-FTL --config dns.reply.blocking.force4 true
+sudo pihole-FTL --config dns.reply.blocking.IPv4 RESPONDER_IP
+```
+
+If the responder is reachable over IPv6, configure `force6` and `IPv6` too.
+For an IPv4-only responder, `IP_NODATA_AAAA` avoids returning an unusable IPv6
+address. Confirm that client Secure DNS, VPN, or operating-system DNS settings
+are not bypassing Pi-hole.
+
+### Other DNS sinkholes
+
+Any resolver is compatible when its blocked response returns the responder's
+reachable IPv4 and, if used, IPv6 address. It must preserve the original
+hostname so the HTTP `Host` header and TLS SNI reach the responder unchanged.
+
+DNS changes answers; it does not rewrite destination ports. The responder must
+therefore be reachable on port `80` for ordinary `http://` URLs and, if HTTPS
+is deliberately enabled, on port `443`.
 
 ## Dedicated address guidance
 
 The responder needs its own static LAN address. A second service cannot share
 the same address and ports `80`/`443` just because its hostname differs. If
-AdGuard Home's admin UI already occupies those ports, use one of these layouts:
+the DNS sinkhole's admin UI already occupies those ports, use one of these layouts:
 
 - **Separate VM or small host:** assign a reserved DHCP lease or static address
   and bind the responder directly to `80`/`443`. This has the clearest failure
@@ -269,16 +298,16 @@ AdGuard Home's admin UI already occupies those ports, use one of these layouts:
   LAN address, then run the responder inside it. This is lightweight but
   requires explicit routing, startup, and firewall management.
 
-Do not point blocked domains at the AdGuard Home address if its UI or another
+Do not point blocked domains at the DNS sinkhole address if its UI or another
 web server would answer them.
 
 ## Verification commands
 
-First verify that AdGuard Home returns the responder address. Replace the
+First verify that the DNS sinkhole returns the responder address. Replace the
 uppercase placeholders with real addresses:
 
 ```sh
-dig blocked.example @ADGUARD_IP
+dig blocked.example @DNS_SINKHOLE_IP
 ```
 
 Then bypass DNS to test the responder itself on production HTTP port `80`:
@@ -466,46 +495,110 @@ that the vendor-specific global fails without the rule and passes with it.
 
 ## Deployment
 
-All supported layouts keep the data responder on `80`/`443`, the admin GUI on
-`8080`/`8443`, and metrics on loopback `9090`. Choose a dedicated LAN address
-so the public data ports do not collide with another web service.
+The default layout keeps the data responder on `80`/`443`, the admin GUI on
+`8080`/`8443`, and metrics on loopback `9090`; every port is configurable.
+Choose a dedicated LAN address so the public data ports do not collide with
+another web service.
 
 ### Docker Compose
 
 The supplied [Dockerfile](Dockerfile) builds a non-root `scratch` image with a
-read-only root filesystem, and [docker-compose.yml](docker-compose.yml)
-publishes the four data/admin ports. Configuration and GUI-managed state live
-together in the single writable `/data` volume. The service drops every Linux
-capability, then adds back only `NET_BIND_SERVICE` so UID `65532` can bind
-ports `80` and `443`.
+read-only root filesystem. [docker-compose.yml](docker-compose.yml) uses the
+published `huntastikus/sinkhole-responder:latest` image by default and remains
+buildable locally with `--build`. Configuration and GUI-managed state live in
+the writable `/data` volume; operator-provided certificates and secret files
+are mounted read-only from `/certs` and `/run/secrets`.
 
 ```sh
-mkdir -p data
-docker compose up --build -d
+mkdir -p data certs secrets
+docker compose up -d
 ```
 
 The first run seeds `/data/config.yaml` with the GUI enabled. On Linux, ensure
-the bind-mounted `./data` directory is writable by UID/GID `65532`. Management
-port `9090` is deliberately not published. The Compose file documents how to
-bind it to host loopback if local Prometheus scraping is required.
+the bind-mounted `./data` directory is writable by the selected UID/GID.
+Management is published to `127.0.0.1:9090` by default, never to the LAN.
 
-The container is configured entirely through Compose; the parameters are:
+#### Container parameters
 
-| Parameter | Value | Purpose |
+Copy [.env.example](.env.example) to `.env` to override Compose settings. Every
+parameter is optional; unset values use the defaults below.
+
+| Optional parameter | Default | Purpose |
 | --- | --- | --- |
-| `ports` | `80`, `443`, `8080`, `8443` | Data HTTP/HTTPS and admin HTTP/HTTPS (`host:container`). Management `9090` is intentionally unpublished. |
-| `command` | `--config /data/config.yaml` | Config path inside the container; seeded on first run. |
-| `volumes` | `./data:/data` | The one writable data path — config plus GUI-managed state (local CA, admin credentials, sessions). |
-| `user` | `65532:65532` | Non-root numeric UID/GID (`scratch` has no passwd file). |
-| `read_only` | `true` | Read-only root filesystem; only `/data` and `/tmp` are writable. |
-| `tmpfs` | `/tmp` | Ephemeral scratch space for the read-only root. |
-| `cap_drop` / `cap_add` | drop `ALL`, add `NET_BIND_SERVICE` | The only capability kept, so the non-root process can bind `80`/`443`. |
-| `security_opt` | `no-new-privileges:true` | The process never gains privileges after exec. |
-| `restart` | `unless-stopped` | Keeps the appliance running and lets the GUI **Restart now** button work — that button applies startup-only settings by exiting cleanly for the supervisor to relaunch. Required for the button; a clean exit under another policy (or none) would stop the responder. |
+| `SINKHOLE_IMAGE` | `huntastikus/sinkhole-responder:latest` | Image to pull and run. |
+| `SINKHOLE_BUILD_VERSION` | `docker` | Version embedded only when building locally with `--build`. |
+| `SINKHOLE_UID`, `SINKHOLE_GID` | `65532`, `65532` | Numeric non-root process identity; the data directory must be writable by it. Do not use `0`. |
+| `SINKHOLE_RESTART_POLICY` | `unless-stopped` | Supervisor policy; keep this enabled for the GUI **Restart now** action. |
+| `SINKHOLE_DATA_DIR` | `./data` | Writable host directory mounted at `/data`. |
+| `SINKHOLE_CERTS_DIR` | `./certs` | Read-only certificate/key directory mounted at `/certs`. |
+| `SINKHOLE_SECRETS_DIR` | `./secrets` | Read-only secret directory mounted at `/run/secrets`. |
+| `SINKHOLE_DATA_BIND_ADDRESS` | `0.0.0.0` | Host address for data HTTP/HTTPS. |
+| `SINKHOLE_ADMIN_BIND_ADDRESS` | `0.0.0.0` | Host address for admin HTTP/HTTPS. |
+| `SINKHOLE_MANAGEMENT_BIND_ADDRESS` | `127.0.0.1` | Host address for health/metrics. Keep loopback unless protected by a trusted network. |
+| `SINKHOLE_HTTP_PORT` | `80` | Data HTTP port. |
+| `SINKHOLE_HTTPS_PORT` | `443` | Data HTTPS port. |
+| `SINKHOLE_ADMIN_HTTP_PORT` | `8080` | Admin HTTP port. |
+| `SINKHOLE_ADMIN_HTTPS_PORT` | `8443` | Admin HTTPS port. |
+| `SINKHOLE_MANAGEMENT_PORT` | `9090` | Management port. |
 
-Runtime settings are overridable with the `SINKHOLE_*` environment variables
-(see the [configuration reference](#configuration-reference)) or by editing
-`/data/config.yaml` and using **Restart now** or a `docker compose restart`.
+Each port is used both inside the container and on the host so admin redirects
+always advertise a reachable address. Blocked clients still connect to standard
+ports `80`/`443`, so nonstandard data ports require equivalent routing or a
+dedicated container address. Ports below `1024` use the image's only added
+capability, `NET_BIND_SERVICE`.
+
+All runtime variables in the [configuration reference](#configuration-reference)
+are also optional Compose inputs. They override `/data/config.yaml` at every
+load; remove a variable to return control to YAML. Listener and state paths are
+derived by Compose from the port and volume parameters above.
+
+#### Passwords and certificates
+
+Prefer a file for the admin password because plain environment values are
+visible in container metadata:
+
+```sh
+printf '%s\n' 'replace-with-a-long-password' > secrets/admin_password
+chmod 600 secrets/admin_password
+```
+
+Then add this optional setting to `.env`:
+
+```dotenv
+SINKHOLE_ADMIN_PASSWORD_FILE=/run/secrets/admin_password
+```
+
+The supplied password becomes authoritative at startup. Changing it rotates
+the session-signing key and signs out existing sessions. If neither password
+variable is set, first-run setup asks for one. `SINKHOLE_ADMIN_PASSWORD` is
+supported for orchestrators with protected environment injection, but the two
+password variables are mutually exclusive.
+
+Place PEM files beneath the host certificate directory and reference their
+container paths. Each certificate and private key is a required pair:
+
+```dotenv
+# Use an existing CA to mint per-host leaves in local-ca mode.
+SINKHOLE_TLS_MODE=local-ca
+SINKHOLE_CA_CERT_FILE=/certs/ca.crt
+SINKHOLE_CA_KEY_FILE=/certs/ca.key
+
+# Or serve one static responder certificate (hosts are comma-separated).
+# SINKHOLE_TLS_MODE=static
+# SINKHOLE_TLS_CERT_FILE=/certs/responder.crt
+# SINKHOLE_TLS_KEY_FILE=/certs/responder.key
+# SINKHOLE_TLS_HOSTS=blocked.example,ads.example
+
+# Optionally use a separate certificate for the admin HTTPS listener.
+# SINKHOLE_ADMIN_TLS_CERT_FILE=/certs/admin.crt
+# SINKHOLE_ADMIN_TLS_KEY_FILE=/certs/admin.key
+```
+
+Use owner-readable permissions for private keys. Inline PEM private keys are
+intentionally unsupported. Environment configuration supports one static
+responder pair; configure multiple host-specific pairs in YAML or the admin UI.
+Without external CA variables, local-CA mode safely generates and persists its
+own CA under `/data`.
 
 ### systemd
 
@@ -609,75 +702,92 @@ Metric families are:
 | `sinkhole_build_info{version}` | gauge | Build/version identity with constant value `1`. |
 
 Application and access logs are structured JSON on standard output. Access
-logs include normalized host, path, matched rule when any, response kind,
+logs include method, normalized host, path, matched rule when any, response kind,
 status, duration, and client address. Query strings are **not logged by
 default** (`logging.log_query: false`). Client addresses are anonymized by
 default to IPv4 `/24` or IPv6 `/48`. Set `logging.access_log: false` to disable
 access logs entirely.
 
+Request body logging is also **disabled by default**. When
+`logging.log_request_body: true`, the responder records up to
+`logging.request_body_log_max_bytes` bytes (default `4096`, maximum `65536`)
+from methods selected in `logging.request_body_methods`. `POST` is selected by
+default; `PUT`, `PATCH`, and `DELETE` can be added individually. GET, HEAD, and
+OPTIONS bodies are never captured. Supported bodies are UTF-8 text, JSON, and
+URL-encoded forms. Common password, secret, token,
+session, cookie, credential, and API-key fields in JSON/forms are replaced with
+`[REDACTED]`. Multipart, compressed/encoded, binary, invalid JSON/form, and
+non-UTF-8 bodies are omitted; long text/form bodies are marked as truncated.
+Captured records use `request_body`; `request_body_redacted` and
+`request_body_truncated` describe processing, while `request_body_omitted` explains
+why an unsafe or unreadable body was not captured.
+
+> **Sensitive-data warning:** body redaction is best-effort and cannot identify
+> every secret or personal value, especially in free-form text. Captured bodies
+> are written to process logs and retained in the admin UI's in-memory log ring.
+> Enable this only temporarily for troubleshooting, restrict log access and
+> retention, and disable it immediately afterward.
+
 ## Configuration reference
 
 `config.example.yaml` is the living schema example. Unknown YAML fields are
 rejected. Durations use Go duration strings such as `250ms`, `10s`, or `24h`.
+Every environment override below is optional and takes precedence over YAML on
+startup and reload. Boolean values must be exactly `true` or `false`.
 
 | Section | Key | Default | Environment override / notes |
 | --- | --- | --- | --- |
 | `listen` | `http` | `["0.0.0.0:80"]` | `SINKHOLE_LISTEN_HTTP`, comma-separated; data responder |
 | `listen` | `https` | `["0.0.0.0:443"]` | `SINKHOLE_LISTEN_HTTPS`, comma-separated; requires TLS enabled |
-| root | `state_dir` | `""` | Empty uses the configuration-file directory; must be writable for GUI state and saves |
-| `admin` | `enabled` | `false` | Auto-seeded configs and `config.example.yaml` set this to `true`; set `false` for headless operation |
-| `admin` | `listen` | `"0.0.0.0:8080"` | Admin HTTP only; not the data responder |
-| `admin.tls` | `enabled` | `true` | Enables the separate admin HTTPS listener |
-| `admin.tls` | `listen` | `"0.0.0.0:8443"` | Admin HTTPS only |
-| `admin.tls` | `cert_file` | `""` | Empty mints CA-signed admin leaves on demand |
-| `admin.tls` | `key_file` | `""` | Private key paired with `cert_file` |
-| `admin.tls` | `redirect_http` | `true` | Redirect admin HTTP to HTTPS when admin TLS is enabled |
-| `admin` | `session_ttl` | `"12h"` | Authenticated admin session lifetime |
-| `admin` | `login_rate_per_ip` | `0.2` | Per-client login attempts per second; non-negative |
-| `admin` | `login_burst` | `5` | Must be at least `1` when login limiting is enabled |
-| `rulepacks` | `enabled` | `[]` | Embedded pack names; `recommended` is the normal starting point |
-| `management` | `enabled` | `true` | No environment override |
+| root | `state_dir` | `""` | `SINKHOLE_STATE_DIR`; empty uses the configuration-file directory |
+| `admin` | `enabled` | `false` | `SINKHOLE_ADMIN_ENABLED`; seeded appliance config uses `true` |
+| `admin` | `listen` | `"0.0.0.0:8080"` | `SINKHOLE_ADMIN_LISTEN`; admin HTTP only |
+| `admin.tls` | `enabled` | `true` | `SINKHOLE_ADMIN_TLS_ENABLED` |
+| `admin.tls` | `listen` | `"0.0.0.0:8443"` | `SINKHOLE_ADMIN_TLS_LISTEN` |
+| `admin.tls` | `cert_file` | `""` | `SINKHOLE_ADMIN_TLS_CERT_FILE`; pair with the key variable |
+| `admin.tls` | `key_file` | `""` | `SINKHOLE_ADMIN_TLS_KEY_FILE`; pair with the certificate variable |
+| `admin.tls` | `redirect_http` | `true` | `SINKHOLE_ADMIN_TLS_REDIRECT_HTTP` |
+| `admin` | `session_ttl` | `"12h"` | `SINKHOLE_ADMIN_SESSION_TTL` |
+| `admin` | `login_rate_per_ip` | `0.2` | `SINKHOLE_ADMIN_LOGIN_RATE_PER_IP`; non-negative |
+| `admin` | `login_burst` | `5` | `SINKHOLE_ADMIN_LOGIN_BURST`; at least `1` when limiting is enabled |
+| `rulepacks` | `enabled` | `[]` | `SINKHOLE_RULEPACKS`, comma-separated; `recommended` is the normal start |
+| `management` | `enabled` | `true` | `SINKHOLE_MANAGEMENT_ENABLED` |
 | `management` | `listen` | `"127.0.0.1:9090"` | `SINKHOLE_MANAGEMENT_LISTEN` |
-| `management` | `allow_external` | `false` | No environment override; required for non-loopback bind |
+| `management` | `allow_external` | `false` | `SINKHOLE_MANAGEMENT_ALLOW_EXTERNAL`; required for non-loopback bind |
 | `tls` | `mode` | `"local-ca"` | `SINKHOLE_TLS_MODE`; `disabled`, `static`, or `local-ca` |
-| `tls.static` | `certs` | `[]` | Each item: `hosts`, `cert_file`, `key_file`; `hosts` may be omitted to use certificate DNS SANs |
-| `tls.local_ca` | `ca_cert` | `""` | Empty uses the auto-generated CA under `state_dir/tls` |
-| `tls.local_ca` | `ca_key` | `""` | Set with `ca_cert`, or leave both empty; owner-only permissions |
-| `tls.local_ca` | `cache_size` | `1024` | Must be at least `1` |
-| `tls.local_ca` | `leaf_ttl` | `"24h"` | Must be at least one minute and is capped by CA expiry |
+| `tls.static` | `certs` | `[]` | One pair via `SINKHOLE_TLS_CERT_FILE`, `SINKHOLE_TLS_KEY_FILE`, and optional comma-separated `SINKHOLE_TLS_HOSTS`; use YAML/UI for multiple pairs |
+| `tls.local_ca` | `ca_cert` | `""` | `SINKHOLE_CA_CERT_FILE`; pair with the key variable; empty auto-generates |
+| `tls.local_ca` | `ca_key` | `""` | `SINKHOLE_CA_KEY_FILE`; pair with the certificate variable |
+| `tls.local_ca` | `cache_size` | `1024` | `SINKHOLE_CA_CACHE_SIZE`; at least `1` |
+| `tls.local_ca` | `leaf_ttl` | `"24h"` | `SINKHOLE_CA_LEAF_TTL`; at least one minute and capped by CA expiry |
 | `defaults` | `status` | `200` | `SINKHOLE_DEFAULTS_STATUS` |
-| `defaults` | `beacon_status` | `200` | No environment override |
-| `defaults` | `media_response` | `"204"` | `204` or `asset`; fonts are always `204` |
-| `defaults` | `cache_control` | `"no-store"` | Sent as `Cache-Control` |
-| `limits` | `max_header_bytes` | `16384` | Server limit; non-negative |
-| `limits` | `max_body_bytes` | `65536` | Request body limit; non-negative |
-| `limits` | `read_timeout` | `"10s"` | Non-negative Go duration |
-| `limits` | `write_timeout` | `"10s"` | Non-negative Go duration |
-| `limits` | `idle_timeout` | `"60s"` | Non-negative Go duration |
-| `limits` | `rate_per_ip` | `0` | Requests/second; `0` disables rate limiting |
-| `limits` | `rate_burst` | `50` | Must be at least `1` when rate limiting is enabled |
+| `defaults` | `beacon_status` | `200` | `SINKHOLE_DEFAULTS_BEACON_STATUS` |
+| `defaults` | `media_response` | `"204"` | `SINKHOLE_DEFAULTS_MEDIA_RESPONSE`; `204` or `asset` |
+| `defaults` | `cache_control` | `"no-store"` | `SINKHOLE_DEFAULTS_CACHE_CONTROL` |
+| `limits` | `max_header_bytes` | `16384` | `SINKHOLE_MAX_HEADER_BYTES`; non-negative |
+| `limits` | `max_body_bytes` | `65536` | `SINKHOLE_MAX_BODY_BYTES`; non-negative |
+| `limits` | `read_timeout` | `"10s"` | `SINKHOLE_READ_TIMEOUT`; non-negative duration |
+| `limits` | `write_timeout` | `"10s"` | `SINKHOLE_WRITE_TIMEOUT`; non-negative duration |
+| `limits` | `idle_timeout` | `"60s"` | `SINKHOLE_IDLE_TIMEOUT`; non-negative duration |
+| `limits` | `rate_per_ip` | `0` | `SINKHOLE_RATE_PER_IP`; requests/second, `0` disables |
+| `limits` | `rate_burst` | `50` | `SINKHOLE_RATE_BURST`; at least `1` when limiting is enabled |
 | `logging` | `level` | `"info"` | `SINKHOLE_LOG_LEVEL`; `debug`, `info`, `warn`, or `error` |
-| `logging` | `access_log` | `true` | `SINKHOLE_ACCESS_LOG`; exactly `true` or `false` |
-| `logging` | `log_query` | `false` | No environment override; may expose tokens if enabled |
-| `logging` | `anonymize_client` | `true` | No environment override |
-| `jsonp` | `enabled` | `false` | No environment override |
-| `jsonp` | `param` | `"callback"` | Required and non-empty when JSONP is enabled |
+| `logging` | `access_log` | `true` | `SINKHOLE_ACCESS_LOG` |
+| `logging` | `log_query` | `false` | `SINKHOLE_LOG_QUERY`; enabling may expose tokens |
+| `logging` | `log_request_body` | `false` | `SINKHOLE_LOG_REQUEST_BODY`; opt-in request body capture; may expose sensitive data |
+| `logging` | `request_body_methods` | `["POST"]` | `SINKHOLE_REQUEST_BODY_METHODS`; comma-separated subset of `POST`, `PUT`, `PATCH`, `DELETE` |
+| `logging` | `request_body_log_max_bytes` | `4096` | `SINKHOLE_REQUEST_BODY_LOG_MAX_BYTES`; capture cap from `1` through `65536` |
+| `logging` | `anonymize_client` | `true` | `SINKHOLE_ANONYMIZE_CLIENT` |
+| `jsonp` | `enabled` | `false` | `SINKHOLE_JSONP_ENABLED` |
+| `jsonp` | `param` | `"callback"` | `SINKHOLE_JSONP_PARAM`; non-empty when enabled |
 | root | `rules` | `[]` | Ordered rules described above |
 
-These are the complete environment overrides implemented by the binary:
-
-```text
-SINKHOLE_LISTEN_HTTP
-SINKHOLE_LISTEN_HTTPS
-SINKHOLE_MANAGEMENT_LISTEN
-SINKHOLE_TLS_MODE
-SINKHOLE_DEFAULTS_STATUS
-SINKHOLE_LOG_LEVEL
-SINKHOLE_ACCESS_LOG
-```
+Admin authentication has two additional optional startup-only inputs:
+`SINKHOLE_ADMIN_PASSWORD_FILE` (preferred) or `SINKHOLE_ADMIN_PASSWORD`. They
+are mutually exclusive and intentionally are not stored in configuration YAML.
 
 Send `SIGHUP` to reload the config. Rules, defaults, JSONP, all logging settings
-(`level`, `access_log`, `log_query`, and `anonymize_client`), and the admin
+(`level`, `access_log`, query/body capture, and `anonymize_client`), and the admin
 session and login-rate tuning take effect immediately. Public listener addresses,
 TLS, management settings, timeouts, body/header limits, rate limiting, the admin
 listener and TLS, and the state directory take effect only after a restart. When
@@ -700,8 +810,8 @@ interceptor. That boundary matters:
 
 - It does **not** block first-party ads or same-domain ad paths when the site's
   real hostname still resolves to the real server.
-- It cannot beat detection that never performs a DNS lookup through AdGuard
-  Home—for example, logic bundled into the page, a hard-coded IP, DNS-over-HTTPS
+- It cannot beat detection that never performs a lookup through the configured
+  DNS sinkhole—for example, logic bundled into the page, a hard-coded IP, DNS-over-HTTPS
   that bypasses your resolver, or an app's own server-side check.
 - HTTPS interception works only after the user deliberately trusts the local
   CA on that client. Without that trust, certificate errors are the correct and

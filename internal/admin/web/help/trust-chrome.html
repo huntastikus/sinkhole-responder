@@ -5,14 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trust the CA in Chrome or Chromium · Sinkhole Responder</title>
   <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
 </head>
 <body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
   <main class="settings-shell help-shell">
     <a class="text-link back-link" href="/tls">← Back to TLS certificates</a>
     <article class="config-card guide-card">
       <p class="eyebrow">Trust-store guide</p>
       <h1>Chrome / Chromium</h1>
       <p>Download it from the TLS page and save the file as <code>ca.cert.pem</code>.</p>
+      <div class="guide-download"><a class="button button-secondary" href="/api/ca/download" download="sinkhole-ca.crt">Download CA certificate</a><small>Generate a CA on the TLS page first if no certificate is available.</small></div>
       <div class="danger-callout" role="note"><strong>Lab/home only</strong><p>Only trust this CA on devices you control in a lab/home network. It lets this tool impersonate any HTTPS site to that device.</p></div>
       <h2>Windows and macOS</h2>
       <p>Chrome and Chromium use the OS trust store. Follow the <a class="text-link" href="/help/trust-windows">Windows guide</a> or <a class="text-link" href="/help/trust-macos">macOS guide</a>.</p>
@@ -20,5 +23,6 @@
       <code class="command-block">certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n sinkhole -i ca.cert.pem</code>
     </article>
   </main>
+  <script type="module" src="/assets/nav.js"></script>
 </body>
 </html>

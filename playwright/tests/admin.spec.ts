@@ -3,13 +3,39 @@ import { expect, request, test, type BrowserContext, type Page } from "@playwrig
 const adminBaseURL = "http://127.0.0.1:8082";
 const dataBaseURL = "http://127.0.0.1:8083";
 const adminPassword = "playwright-admin-password";
+const authenticatedPagePaths = [
+  "/",
+  "/wizard",
+  "/config",
+  "/rules",
+  "/rulepacks",
+  "/tls",
+  "/tools",
+  "/tools/detector",
+  "/logs",
+  "/help/",
+  "/help/quick-start",
+  "/help/adguard-home",
+  "/help/tls-trust",
+  "/help/rules-rulepacks",
+  "/help/adblock-limits",
+  "/help/security",
+  "/help/troubleshooting",
+  "/help/trust-windows",
+  "/help/trust-macos",
+  "/help/trust-ios",
+  "/help/trust-android",
+  "/help/trust-debian",
+  "/help/trust-firefox",
+  "/help/trust-chrome",
+];
 
 test.describe.serial("admin GUI", () => {
   let context: BrowserContext | undefined;
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
-    context = await browser.newContext();
+    context = await browser.newContext({ viewport: { width: 1800, height: 1100 } });
     page = await context.newPage();
   });
 
@@ -19,6 +45,9 @@ test.describe.serial("admin GUI", () => {
 
   test("first-run setup creates credentials and opens the wizard", async () => {
     await page.goto(`${adminBaseURL}/setup`);
+    await expect(page.locator(".auth-mark")).toBeVisible();
+    await expect(page.locator(".auth-mark")).toHaveAttribute("src", "/assets/logo.svg");
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/assets/logo.svg");
     await page.getByLabel("Password").fill(adminPassword);
     await page.getByRole("button", { name: "Create password" }).click();
 
@@ -28,7 +57,7 @@ test.describe.serial("admin GUI", () => {
     await expect(page.locator("#wizard-progress")).toHaveText("Step 1 of 6");
   });
 
-  test("wizard enables recommended protection and renders AdGuard Home YAML", async () => {
+  test("wizard enables recommended protection and renders DNS sinkhole guidance", async () => {
     await page.getByLabel("Or enter an address").fill("127.0.0.1");
     await page.getByRole("button", { name: "Next" }).click();
     await expect(page.getByRole("heading", { name: "Choose HTTP or HTTPS placeholders" })).toBeVisible();
@@ -41,7 +70,7 @@ test.describe.serial("admin GUI", () => {
     await expect(page.locator("#protection-status")).toHaveText("Recommended rule packs are enabled.");
     await page.getByRole("button", { name: "Next" }).click();
 
-    await expect(page.getByRole("heading", { name: "Point AdGuard Home here" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Point blocked DNS names here" })).toBeVisible();
     await expect(page.locator("#agh-ip")).toHaveText("127.0.0.1");
     await expect(page.locator("#agh-yaml")).toHaveValue(/blocking_mode: custom_ip/);
     await expect(page.locator("#agh-yaml")).toHaveValue(/blocking_ipv4: 127\.0\.0\.1/);
@@ -57,9 +86,76 @@ test.describe.serial("admin GUI", () => {
     const dashboardLink = page.locator('#app-nav a[href="/"]');
     await expect(dashboardLink).toHaveText("Dashboard");
     await expect(dashboardLink).toHaveAttribute("aria-current", "page");
+    await expect(page.locator(".app-nav-logo")).toBeVisible();
+    await expect(page.locator(".app-nav-logo")).toHaveAttribute("src", "/assets/logo.svg");
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/assets/logo.svg");
     await expect(page.locator("#gauge svg")).toBeVisible();
     await expect(page.locator('[data-metric="requests_total"]')).toHaveText(/^\d+$/);
     await expect(page.locator('[data-metric="rules_loaded"]')).toHaveText(/^[1-9]\d*$/);
+
+    const healthButton = page.locator("#system-health-button");
+    await expect(healthButton).toContainText("System amber");
+    await expect(page.locator("#system-health-alert")).toBeVisible();
+    await expect(page.locator("#system-health-alert-checks")).toContainText("tls");
+
+    await healthButton.click();
+    await expect(healthButton).toHaveAttribute("aria-expanded", "true");
+    await expect(page.locator("#system-health-panel")).toBeVisible();
+    await expect(page.locator("#system-health-checks")).toContainText("listeners");
+    await page.keyboard.press("Escape");
+    await expect(healthButton).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator("#system-health-panel")).toBeHidden();
+  });
+
+  test("navigation collapses before its links can wrap", async () => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.goto(`${adminBaseURL}/`);
+
+    const navigation = page.locator("#app-nav");
+    const navigationBox = await navigation.boundingBox();
+    expect(navigationBox?.height).toBeLessThan(80);
+
+    const menuButton = page.getByRole("button", { name: "Menu" });
+    await expect(menuButton).toBeVisible();
+    await expect(page.locator("#app-nav-panel")).toBeHidden();
+    await menuButton.click();
+    await expect(page.locator('#app-nav a[href="/config"]')).toBeVisible();
+
+    await page.setViewportSize({ width: 1800, height: 1100 });
+  });
+
+  test("authenticated pages stay structured and responsive", async () => {
+    test.setTimeout(60_000);
+
+    for (const viewport of [
+      { width: 1800, height: 1100 },
+      { width: 390, height: 844 },
+      { width: 320, height: 568 },
+    ]) {
+      await page.setViewportSize(viewport);
+      for (const path of authenticatedPagePaths) {
+        await page.goto(`${adminBaseURL}${path}`);
+        await expect(page.locator("#app-nav")).toBeVisible();
+        await expect(page.locator("#system-health-button")).toBeVisible();
+        await expect(page.locator("h1")).toHaveCount(1);
+        const overflowingElements = await page.evaluate(() => {
+          const viewportWidth = document.documentElement.clientWidth;
+          if (document.documentElement.scrollWidth <= viewportWidth + 1) {
+            return [];
+          }
+          return [...document.querySelectorAll("body *")]
+            .filter((element) => {
+              const bounds = element.getBoundingClientRect();
+              return bounds.left < -1 || bounds.right > viewportWidth + 1;
+            })
+            .slice(0, 5)
+            .map((element) => `${element.tagName.toLowerCase()}.${element.className || "(no class)"}`);
+        });
+        expect(overflowingElements, `${path} overflows at ${viewport.width}px`).toEqual([]);
+      }
+    }
+
+    await page.setViewportSize({ width: 1800, height: 1100 });
   });
 
   test("rule builder saves a custom response and reloads the data plane", async () => {
@@ -95,6 +191,45 @@ test.describe.serial("admin GUI", () => {
     await expect(recommended).toBeChecked();
   });
 
+  test("request body logging is opt-in with selectable methods and a sensitive-data warning", async () => {
+    await page.goto(`${adminBaseURL}/config`);
+
+    await expect(page.getByText("Sensitive-data risk", { exact: true })).toBeVisible();
+    await expect(page.getByText(/Redaction is best-effort/)).toBeVisible();
+
+    const enabled = page.getByLabel("Log request bodies");
+    const limit = page.getByLabel("Request body log bytes");
+    await expect(enabled).not.toBeChecked();
+    await expect(limit).toHaveValue("4096");
+    const postMethod = page.getByLabel("POST", { exact: true });
+    await expect(postMethod).toBeChecked();
+    await expect(page.getByLabel("PUT", { exact: true })).not.toBeChecked();
+    await expect(page.getByLabel("PATCH", { exact: true })).not.toBeChecked();
+    await expect(page.getByLabel("DELETE", { exact: true })).not.toBeChecked();
+
+    await enabled.check();
+    await postMethod.uncheck();
+    await page.getByRole("button", { name: "Save configuration" }).click();
+    await expect(page.locator("#logging-request-body-methods-error")).toHaveText(/Select at least one method/);
+    await postMethod.check();
+    await page.getByLabel("PUT", { exact: true }).check();
+    await page.getByLabel("PATCH", { exact: true }).check();
+    await page.getByLabel("DELETE", { exact: true }).check();
+    await limit.fill("2048");
+    const saveResponse = page.waitForResponse(
+      (response) => response.url() === `${adminBaseURL}/api/config` && response.request().method() === "PUT",
+    );
+    await page.getByRole("button", { name: "Save configuration" }).click();
+    expect((await saveResponse).status()).toBe(200);
+
+    await page.reload();
+    await expect(enabled).toBeChecked();
+    await expect(limit).toHaveValue("2048");
+    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+      await expect(page.getByLabel(method, { exact: true })).toBeChecked();
+    }
+  });
+
   test("certificate manager generates a CA with fingerprint and download link", async () => {
     await page.goto(`${adminBaseURL}/tls`);
     await page.getByRole("button", { name: "Generate CA", exact: true }).click();
@@ -110,6 +245,7 @@ test.describe.serial("admin GUI", () => {
     await page.getByRole("button", { name: "Logout" }).click();
     await expect(page).toHaveURL(`${adminBaseURL}/login`);
     await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+    await expect(page.locator(".auth-mark")).toBeVisible();
 
     await page.getByLabel("Password").fill(adminPassword);
     await page.getByRole("button", { name: "Sign in" }).click();

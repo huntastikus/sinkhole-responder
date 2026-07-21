@@ -20,7 +20,7 @@
       <h2>Hard limits: what it cannot do</h2>
       <ul class="guide-steps">
         <li>It does <strong>not block first-party or same-domain ads</strong> when the real hostname still resolves to the site's real server.</li>
-        <li>It cannot beat detection that never performs a DNS lookup through AdGuard Home: page-bundled logic, a hard-coded IP, DNS-over-HTTPS that bypasses your resolver, or a server-side check.</li>
+        <li>It cannot beat detection that never performs a lookup through your configured DNS sinkhole: page-bundled logic, a hard-coded IP, DNS-over-HTTPS that bypasses your resolver, or a server-side check.</li>
         <li>HTTPS needs deliberate CA trust on each client. Without that trust, certificate errors are correct and expected.</li>
         <li>It cannot prove an ad <strong>impression</strong> to a vendor, mint vendor cookies or tokens, reproduce signed content, or satisfy arbitrary origin, credential, signature, or response checks.</li>
         <li>It cannot satisfy <strong>Subresource Integrity (SRI)</strong> hashes for the original resource or bypass certificate pinning.</li>

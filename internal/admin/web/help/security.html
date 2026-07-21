@@ -31,6 +31,12 @@
         <li>The responder needs no initiated outbound traffic. Enforce a suitable no-egress policy where your runtime supports it, while still allowing response traffic back to trusted clients.</li>
       </ul>
 
+      <h2>Protect diagnostic logs</h2>
+      <ul class="guide-steps">
+        <li>Keep query-string and request body logging disabled unless actively troubleshooting.</li>
+        <li>Best-effort redaction cannot guarantee removal of every password, token, or personal value. Restrict log access, keep retention short, and disable body logging immediately afterward.</li>
+      </ul>
+
       <p>Use the hardened Compose or systemd example supplied with the project as your baseline. The deployment README's <strong>Security hardening</strong> section includes LAN firewall examples and the operational details behind this checklist.</p>
 
       <div class="danger-callout" role="note">

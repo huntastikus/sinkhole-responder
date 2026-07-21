@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/mgmt"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/mgmt"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
 )
 
 func (s *Server) mux() *http.ServeMux {
@@ -74,6 +74,12 @@ func TestHandlerRoutes(t *testing.T) {
 			path:       "/assets/api.js",
 			wantStatus: http.StatusOK,
 			wantType:   "javascript",
+		},
+		{
+			name:       "SVG logo",
+			path:       "/assets/logo.svg",
+			wantStatus: http.StatusOK,
+			wantType:   "image/svg+xml",
 		},
 		{
 			name:       "HTML blocked from public assets",
@@ -137,6 +143,9 @@ func TestAdminPageShowsReleaseCandidateVersion(t *testing.T) {
 	}
 	if !strings.Contains(response.Body.String(), `<footer class="app-footer"><span>v1.2.3-RC</span></footer>`) {
 		t.Errorf("admin page does not show the normalized RC version: %q", response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), `rel="icon" href="/assets/logo.svg" type="image/svg+xml"`) {
+		t.Errorf("admin page does not use the embedded logo as its favicon: %q", response.Body.String())
 	}
 }
 
@@ -207,6 +216,27 @@ func TestServeReturnsNilAfterContextCancel(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("Serve did not return after context cancellation")
+	}
+}
+
+func TestAdminHTTPServerHasResourceLimits(t *testing.T) {
+	t.Parallel()
+
+	server := newAdminHTTPServer(http.NotFoundHandler())
+	if server.ReadHeaderTimeout != adminReadHeaderTimeout {
+		t.Errorf("ReadHeaderTimeout = %v, want %v", server.ReadHeaderTimeout, adminReadHeaderTimeout)
+	}
+	if server.ReadTimeout != adminReadTimeout {
+		t.Errorf("ReadTimeout = %v, want %v", server.ReadTimeout, adminReadTimeout)
+	}
+	if server.WriteTimeout != adminWriteTimeout {
+		t.Errorf("WriteTimeout = %v, want %v", server.WriteTimeout, adminWriteTimeout)
+	}
+	if server.IdleTimeout != adminIdleTimeout {
+		t.Errorf("IdleTimeout = %v, want %v", server.IdleTimeout, adminIdleTimeout)
+	}
+	if server.MaxHeaderBytes != adminMaxHeaderBytes {
+		t.Errorf("MaxHeaderBytes = %d, want %d", server.MaxHeaderBytes, adminMaxHeaderBytes)
 	}
 }
 

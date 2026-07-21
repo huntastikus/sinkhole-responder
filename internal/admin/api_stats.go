@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/mgmt"
+	"github.com/huntastikus/sinkhole-responder/internal/mgmt"
 )
 
 type statsResponse struct {

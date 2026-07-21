@@ -14,15 +14,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/admin"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/httpserver"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/logbuf"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/mgmt"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rulepacks"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rules"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/tlsx"
+	"github.com/huntastikus/sinkhole-responder/internal/admin"
+	"github.com/huntastikus/sinkhole-responder/internal/config"
+	"github.com/huntastikus/sinkhole-responder/internal/httpserver"
+	"github.com/huntastikus/sinkhole-responder/internal/logbuf"
+	"github.com/huntastikus/sinkhole-responder/internal/mgmt"
+	"github.com/huntastikus/sinkhole-responder/internal/rulepacks"
+	"github.com/huntastikus/sinkhole-responder/internal/rules"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/tlsx"
 )
 
 // Option configures Run.
@@ -34,6 +34,7 @@ type runOptions struct {
 	history         *mgmt.History
 	configPath      string
 	logLevel        *slog.LevelVar
+	adminPassword   *string
 }
 
 // WithReadyFunc registers a function called once all public listeners are
@@ -72,6 +73,15 @@ func WithConfigPath(path string) Option {
 func WithLogLevel(level *slog.LevelVar) Option {
 	return func(options *runOptions) {
 		options.logLevel = level
+	}
+}
+
+// WithAdminPassword configures the persisted admin credential at startup.
+// Supplying a different password rotates the session signing key so existing
+// browser sessions cannot survive a password rotation.
+func WithAdminPassword(password string) Option {
+	return func(options *runOptions) {
+		options.adminPassword = &password
 	}
 }
 
@@ -124,6 +134,16 @@ func Run(ctx context.Context, cfg *config.Config, version string, logger *slog.L
 		if err != nil {
 			return fmt.Errorf("initialize state directory %q: %w", resolvedStateDir, err)
 		}
+	}
+	if options.adminPassword != nil {
+		if !cfg.Admin.Enabled {
+			return errors.New("admin password configured while the admin plane is disabled")
+		}
+		changed, err := admin.ConfigurePassword(appState, *options.adminPassword)
+		if err != nil {
+			return fmt.Errorf("configure admin password: %w", err)
+		}
+		logger.Info("admin password synchronized from startup configuration", "changed", changed)
 	}
 
 	resolvedLocalCA := cfg.TLS.LocalCA

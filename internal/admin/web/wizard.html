@@ -14,7 +14,7 @@
       <div>
         <p class="eyebrow">Sinkhole Responder</p>
         <h1>Setup wizard</h1>
-        <p class="settings-intro">Choose how this responder works on your network, then get the exact AdGuard Home settings to paste.</p>
+        <p class="settings-intro">Choose how this responder works on your network, then point AdGuard Home, Pi-hole, or another compatible DNS sinkhole to it.</p>
       </div>
     </header>
 
@@ -25,7 +25,7 @@
         <li>Access mode</li>
         <li>Certificate authority</li>
         <li>Protection</li>
-        <li>AdGuard Home</li>
+        <li>DNS sinkhole</li>
         <li>Done</li>
       </ol>
     </nav>
@@ -36,7 +36,7 @@
       <section class="config-card tls-card tls-guides" data-wizard-step aria-labelledby="step-lan-heading">
         <p class="eyebrow">Welcome</p>
         <h2 id="step-lan-heading" tabindex="-1">Choose this responder’s LAN IP</h2>
-        <p class="section-help">AdGuard Home will send blocked domains to this address so the responder can return harmless placeholders.</p>
+        <p class="section-help">Your DNS sinkhole will send blocked domains to this address so the responder can return harmless placeholders.</p>
 
         <fieldset class="nested-fieldset">
           <legend>Detected addresses</legend>
@@ -115,10 +115,11 @@
       </section>
 
       <section class="config-card tls-card tls-guides" data-wizard-step aria-labelledby="step-agh-heading" hidden>
-        <p class="eyebrow">AdGuard Home</p>
-        <h2 id="step-agh-heading" tabindex="-1">Point AdGuard Home here</h2>
-        <p class="section-help">Apply these settings in AdGuard Home. This wizard never connects to or modifies AdGuard Home.</p>
+        <p class="eyebrow">DNS sinkhole</p>
+        <h2 id="step-agh-heading" tabindex="-1">Point blocked DNS names here</h2>
+        <p class="section-help">For AdGuard Home, use the generated settings below. For Pi-hole or another compatible DNS sinkhole, follow the <a class="text-link" href="/help/adguard-home">DNS sinkhole setup guide</a>. This wizard never connects to or modifies your DNS service.</p>
         <p>Responder address: <code id="agh-ip"></code></p>
+        <h3>AdGuard Home settings</h3>
         <ol id="agh-steps" class="guide-steps"></ol>
         <label class="raw-label" for="agh-yaml">YAML configuration</label>
         <textarea id="agh-yaml" class="raw-editor" rows="7" readonly></textarea>

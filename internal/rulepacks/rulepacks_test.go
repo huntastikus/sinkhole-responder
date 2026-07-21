@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/assets"
-	"git.kopenczei.net/arpad/sinkhole-responder/internal/rules"
+	"github.com/huntastikus/sinkhole-responder/internal/assets"
+	"github.com/huntastikus/sinkhole-responder/internal/rules"
 )
 
 func TestAvailable(t *testing.T) {

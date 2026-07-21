@@ -186,6 +186,10 @@
 
       <fieldset class="config-card">
         <legend>Logging</legend>
+        <div class="danger-callout" role="note">
+          <strong>Sensitive-data risk</strong>
+          <p>Request bodies can contain passwords, tokens, personal information, and other secrets. Redaction is best-effort and cannot guarantee that every sensitive value is removed. Enable body logging only temporarily, protect all log outputs, and disable it after troubleshooting.</p>
+        </div>
         <div class="field-grid">
           <div class="field">
             <label for="logging-level">Level</label>
@@ -210,6 +214,41 @@
             <small class="field-help">Include URL query strings in access-log records.</small>
             <small class="field-error" aria-live="polite"></small>
           </div>
+          <div class="field field-toggle">
+            <input id="logging-request-body" type="checkbox" data-config-path="logging.log_request_body" data-value-type="boolean">
+            <label for="logging-request-body">Log request bodies</label>
+            <small class="field-help">Opt in to bounded text, JSON, and form-body logging for the methods selected below.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="logging-request-body-max">Request body log bytes</label>
+            <input id="logging-request-body-max" type="number" min="1" max="65536" step="1" data-config-path="logging.request_body_log_max_bytes" data-value-type="number">
+            <small class="field-help">Maximum bytes retained per selected request, from 1 through 65536.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <fieldset class="request-body-methods">
+            <legend>Request body methods</legend>
+            <div class="request-body-method-options">
+              <label class="field-toggle" for="logging-request-body-post">
+                <input id="logging-request-body-post" type="checkbox" value="POST" data-request-body-method>
+                <span>POST</span>
+              </label>
+              <label class="field-toggle" for="logging-request-body-put">
+                <input id="logging-request-body-put" type="checkbox" value="PUT" data-request-body-method>
+                <span>PUT</span>
+              </label>
+              <label class="field-toggle" for="logging-request-body-patch">
+                <input id="logging-request-body-patch" type="checkbox" value="PATCH" data-request-body-method>
+                <span>PATCH</span>
+              </label>
+              <label class="field-toggle" for="logging-request-body-delete">
+                <input id="logging-request-body-delete" type="checkbox" value="DELETE" data-request-body-method>
+                <span>DELETE</span>
+              </label>
+            </div>
+            <small class="field-help">POST is selected by default. GET, HEAD, and OPTIONS bodies are never captured.</small>
+            <small id="logging-request-body-methods-error" class="field-error" aria-live="polite"></small>
+          </fieldset>
           <div class="field field-toggle">
             <input id="logging-anonymize" type="checkbox" data-config-path="logging.anonymize_client" data-value-type="boolean">
             <label for="logging-anonymize">Anonymize clients</label>
