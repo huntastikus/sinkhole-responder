@@ -24,7 +24,7 @@ func TestTLSPageIsServedToAuthenticatedUsers(t *testing.T) {
 	if got := response.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/html") {
 		t.Errorf("Content-Type = %q, want text/html", got)
 	}
-	for _, want := range []string{`/assets/tls.js`, `id="tls-mode"`} {
+	for _, want := range []string{`/assets/tls.js`, `id="tls-mode"`, `href="/api/ca/download"`} {
 		if !strings.Contains(response.Body.String(), want) {
 			t.Errorf("body does not contain %q", want)
 		}
@@ -74,7 +74,7 @@ func TestTrustStoreGuidesAreServed(t *testing.T) {
 				t.Errorf("Content-Type = %q, want text/html", got)
 			}
 			body := response.Body.String()
-			for _, want := range []string{test.marker, "lab/home"} {
+			for _, want := range []string{test.marker, "lab/home", `href="/api/ca/download"`} {
 				if !strings.Contains(body, want) {
 					t.Errorf("body does not contain %q", want)
 				}

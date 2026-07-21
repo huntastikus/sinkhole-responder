@@ -102,3 +102,28 @@ func SaveCredential(d *state.Dir, c Credential) error {
 	}
 	return nil
 }
+
+// ConfigurePassword makes a startup-provided password authoritative. It does
+// nothing when the persisted credential already matches, and rotates the
+// session key whenever a new or changed credential is written.
+func ConfigurePassword(d *state.Dir, password string) (bool, error) {
+	current, present, err := LoadCredential(d)
+	if err != nil {
+		return false, err
+	}
+	if present && current.Verify(password) {
+		return false, nil
+	}
+
+	credential, err := HashPassword(password)
+	if err != nil {
+		return false, err
+	}
+	if err := RotateSessionKey(d); err != nil {
+		return false, fmt.Errorf("rotate admin sessions: %w", err)
+	}
+	if err := SaveCredential(d, credential); err != nil {
+		return false, err
+	}
+	return true, nil
+}

@@ -51,6 +51,9 @@
             <div><dt>Subject</dt><dd id="ca-subject"></dd></div>
             <div><dt>Expires</dt><dd id="ca-not-after"></dd></div>
           </dl>
+          <div class="result-actions">
+            <a class="button button-secondary" href="/api/ca/download" download="sinkhole-ca.crt">Download CA certificate</a>
+          </div>
         </section>
 
         <section class="status-block" aria-labelledby="static-status-heading">
@@ -119,7 +122,7 @@
           <p>SHA-256 fingerprint</p>
           <code id="generated-fingerprint" class="fingerprint"></code>
           <div class="result-actions">
-            <a class="button" href="/api/ca/download">Download CA certificate</a>
+            <a class="button" href="/api/ca/download" download="sinkhole-ca.crt">Download CA certificate</a>
             <button id="activate-local-ca" class="button button-primary" type="button">Activate (use as local-CA now)</button>
           </div>
         </section>

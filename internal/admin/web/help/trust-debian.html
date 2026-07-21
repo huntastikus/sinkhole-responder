@@ -15,6 +15,7 @@
       <p class="eyebrow">Trust-store guide</p>
       <h1>Debian / Ubuntu (system-wide)</h1>
       <p>Download it from the TLS page and save the file as <code>ca.cert.pem</code>.</p>
+      <div class="guide-download"><a class="button button-secondary" href="/api/ca/download" download="sinkhole-ca.crt">Download CA certificate</a><small>Generate a CA on the TLS page first if no certificate is available.</small></div>
       <div class="danger-callout" role="note"><strong>Lab/home only</strong><p>Only trust this CA on devices you control in a lab/home network. It lets this tool impersonate any HTTPS site to that device.</p></div>
       <h2>Install the CA</h2>
       <code class="command-block">sudo cp ca.cert.pem /usr/local/share/ca-certificates/sinkhole.crt &amp;&amp; sudo update-ca-certificates</code>

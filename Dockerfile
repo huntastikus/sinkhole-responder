@@ -35,7 +35,7 @@ VOLUME ["/data"]
 
 USER 65532:65532
 
-EXPOSE 80 443 8080 8443
+EXPOSE 80 443 8080 8443 9090
 
 ENTRYPOINT ["/sinkhole-responder"]
 CMD ["--config", "/data/config.yaml"]

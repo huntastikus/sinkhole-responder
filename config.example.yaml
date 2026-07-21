@@ -1,7 +1,7 @@
 # Sinkhole Responder example configuration.
-# See README.md for deployment, AdGuard Home, TLS, rule, and security guidance.
+# See README.md for deployment, DNS sinkhole, TLS, rule, and security guidance.
 # Supported SINKHOLE_* environment variables are noted beside the settings they
-# override; the complete list is also in the README configuration reference.
+# override; all are optional and the complete list is in the README.
 
 # HTTP listen addresses. Default: ["0.0.0.0:80"]. Env: SINKHOLE_LISTEN_HTTP (comma-separated).
 listen:
@@ -9,88 +9,89 @@ listen:
   # HTTPS listen addresses. Default: ["0.0.0.0:443"]. Env: SINKHOLE_LISTEN_HTTPS (comma-separated).
   https: ["0.0.0.0:443"]
 
-# Writable state directory. Default: "" (the directory containing this config file).
+# Writable state directory. Default: "" (the config directory). Env: SINKHOLE_STATE_DIR.
 state_dir: ""
 
-# Admin UI; recommended for the v2 GUI appliance. Set false for headless operation. Default: false.
+# Admin UI. Default: false. Env: SINKHOLE_ADMIN_ENABLED.
 admin:
   enabled: true
-  # HTTP admin listen address. Default: "0.0.0.0:8080".
+  # HTTP admin listen address. Default: "0.0.0.0:8080". Env: SINKHOLE_ADMIN_LISTEN.
   listen: "0.0.0.0:8080"
   tls:
-    # Also serve the admin UI over HTTPS. Default: true.
+    # Also serve the admin UI over HTTPS. Default: true. Env: SINKHOLE_ADMIN_TLS_ENABLED.
     enabled: true
-    # HTTPS admin listen address. Default: "0.0.0.0:8443".
+    # HTTPS admin listen address. Default: "0.0.0.0:8443". Env: SINKHOLE_ADMIN_TLS_LISTEN.
     listen: "0.0.0.0:8443"
-    # Optional certificate path; a local-CA-signed certificate is minted on demand when empty. Default: "".
+    # Optional certificate path. Default: "". Env: SINKHOLE_ADMIN_TLS_CERT_FILE (pair with key).
     cert_file: ""
-    # Optional private-key path. Default: "".
+    # Optional private-key path. Default: "". Env: SINKHOLE_ADMIN_TLS_KEY_FILE (pair with cert).
     key_file: ""
-    # Redirect the HTTP admin listener to HTTPS when TLS is enabled. Default: true.
+    # Redirect admin HTTP to HTTPS. Default: true. Env: SINKHOLE_ADMIN_TLS_REDIRECT_HTTP.
     redirect_http: true
-  # Authenticated admin session lifetime. Default: "12h".
+  # Authenticated admin session lifetime. Default: "12h". Env: SINKHOLE_ADMIN_SESSION_TTL.
   session_ttl: "12h"
-  # Per-client login attempt rate. Default: 0.2 (about one attempt every five seconds).
+  # Login attempts/second/client. Default: 0.2. Env: SINKHOLE_ADMIN_LOGIN_RATE_PER_IP.
   login_rate_per_ip: 0.2
-  # Login rate-limit burst. Default: 5.
+  # Login rate-limit burst. Default: 5. Env: SINKHOLE_ADMIN_LOGIN_BURST.
   login_burst: 5
 
-# Optional embedded rulepacks appended after user rules. Default: [].
+# Optional embedded rulepacks appended after user rules. Default: []. Env: SINKHOLE_RULEPACKS.
 rulepacks:
   enabled: []
   # Enable the curated adblock-network stubs (recommended for most users):
   # enabled: ["recommended"]
   # Other available packs: adsense, amazon-tam, analytics, anti-adblock, cmp, facebook, gpt, prebid.
 
-# Enable the management listener. Default: true.
+# Enable the management listener. Default: true. Env: SINKHOLE_MANAGEMENT_ENABLED.
 management:
   enabled: true
   # Management listen address. Default: "127.0.0.1:9090". Env: SINKHOLE_MANAGEMENT_LISTEN.
   listen: "127.0.0.1:9090"
-  # Permit management binding outside loopback. Default: false.
+  # Permit non-loopback management binding. Default: false. Env: SINKHOLE_MANAGEMENT_ALLOW_EXTERNAL.
   allow_external: false
 
 # TLS mode: disabled, static, or local-ca. Default: "local-ca". Env: SINKHOLE_TLS_MODE.
 tls:
   mode: "local-ca"
-  # Static certificate pairs. Default: [].
+  # Static certificate pairs. Default: []. Env supports one pair via
+  # SINKHOLE_TLS_CERT_FILE, SINKHOLE_TLS_KEY_FILE, and optional SINKHOLE_TLS_HOSTS.
   static:
     certs: []
     # Each entry has hosts: [], cert_file: "", and key_file: ""; no entries exist by default.
-  # Local CA certificate path. Default: "".
+  # Local CA certificate path. Default: "". Env: SINKHOLE_CA_CERT_FILE (pair with key).
   local_ca:
     ca_cert: ""
-    # Local CA private-key path. Default: "".
+    # Local CA private-key path. Default: "". Env: SINKHOLE_CA_KEY_FILE (pair with cert).
     ca_key: ""
-    # Generated-certificate cache capacity. Default: 1024.
+    # Generated-certificate cache capacity. Default: 1024. Env: SINKHOLE_CA_CACHE_SIZE.
     cache_size: 1024
-    # Generated leaf-certificate lifetime. Default: "24h".
+    # Generated leaf lifetime. Default: "24h". Env: SINKHOLE_CA_LEAF_TTL.
     leaf_ttl: "24h"
 
 # Default HTTP status. Default: 200. Env: SINKHOLE_DEFAULTS_STATUS.
 defaults:
   status: 200
-  # Beacon response status. Default: 200.
+  # Beacon response status. Default: 200. Env: SINKHOLE_DEFAULTS_BEACON_STATUS.
   beacon_status: 200
-  # Media response strategy: "204" or "asset". Default: "204".
+  # Media response strategy. Default: "204". Env: SINKHOLE_DEFAULTS_MEDIA_RESPONSE.
   media_response: "204"
-  # Cache-Control response value. Default: "no-store".
+  # Cache-Control value. Default: "no-store". Env: SINKHOLE_DEFAULTS_CACHE_CONTROL.
   cache_control: "no-store"
 
-# Maximum request-header bytes. Default: 16384.
+# Maximum request-header bytes. Default: 16384. Env: SINKHOLE_MAX_HEADER_BYTES.
 limits:
   max_header_bytes: 16384
-  # Maximum request-body bytes. Default: 65536.
+  # Maximum request-body bytes. Default: 65536. Env: SINKHOLE_MAX_BODY_BYTES.
   max_body_bytes: 65536
-  # Request read timeout. Default: "10s".
+  # Request read timeout. Default: "10s". Env: SINKHOLE_READ_TIMEOUT.
   read_timeout: "10s"
-  # Response write timeout. Default: "10s".
+  # Response write timeout. Default: "10s". Env: SINKHOLE_WRITE_TIMEOUT.
   write_timeout: "10s"
-  # Keep-alive idle timeout. Default: "60s".
+  # Keep-alive idle timeout. Default: "60s". Env: SINKHOLE_IDLE_TIMEOUT.
   idle_timeout: "60s"
-  # Per-client request rate; zero disables limiting. Default: 0.
+  # Per-client request rate. Default: 0. Env: SINKHOLE_RATE_PER_IP.
   rate_per_ip: 0
-  # Per-client rate-limit burst. Default: 50.
+  # Per-client rate-limit burst. Default: 50. Env: SINKHOLE_RATE_BURST.
   rate_burst: 50
 
 # Log level: debug, info, warn, or error. Default: "info". Env: SINKHOLE_LOG_LEVEL.
@@ -98,15 +99,15 @@ logging:
   level: "info"
   # Enable access logs. Default: true. Env: SINKHOLE_ACCESS_LOG (true or false).
   access_log: true
-  # Include query strings in logs; they may contain tokens. Default: false.
+  # Include queries in logs. Default: false. Env: SINKHOLE_LOG_QUERY.
   log_query: false
-  # Anonymize client addresses in logs. Default: true.
+  # Anonymize client addresses. Default: true. Env: SINKHOLE_ANONYMIZE_CLIENT.
   anonymize_client: true
 
-# Enable JSONP responses. Default: false.
+# Enable JSONP responses. Default: false. Env: SINKHOLE_JSONP_ENABLED.
 jsonp:
   enabled: false
-  # JSONP callback query parameter. Default: "callback".
+  # JSONP callback query parameter. Default: "callback". Env: SINKHOLE_JSONP_PARAM.
   param: "callback"
 
 # Ordered response rules; the first matching rule wins. See README.md for every

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"bytes"
 	"encoding/base64"
 	"os"
 	"testing"
@@ -99,6 +100,51 @@ func TestSaveAndLoadCredential(t *testing.T) {
 	}
 	if got, want := info.Mode().Perm(), os.FileMode(0o600); got != want {
 		t.Fatalf("credentials mode = %o, want %o", got, want)
+	}
+}
+
+func TestConfigurePasswordCreatesAndRotatesCredential(t *testing.T) {
+	d := newTestStateDir(t)
+
+	changed, err := ConfigurePassword(d, "first secure password")
+	if err != nil || !changed {
+		t.Fatalf("first ConfigurePassword() = changed %t, error %v", changed, err)
+	}
+	credential, present, err := LoadCredential(d)
+	if err != nil || !present || !credential.Verify("first secure password") {
+		t.Fatalf("configured credential = present %t, error %v", present, err)
+	}
+	firstSessionKey, err := LoadOrCreateSessionKey(d)
+	if err != nil {
+		t.Fatalf("LoadOrCreateSessionKey(): %v", err)
+	}
+
+	changed, err = ConfigurePassword(d, "first secure password")
+	if err != nil || changed {
+		t.Fatalf("matching ConfigurePassword() = changed %t, error %v", changed, err)
+	}
+	unchangedSessionKey, err := LoadOrCreateSessionKey(d)
+	if err != nil {
+		t.Fatalf("reload unchanged session key: %v", err)
+	}
+	if !bytes.Equal(unchangedSessionKey, firstSessionKey) {
+		t.Fatal("matching configured password rotated the session key")
+	}
+
+	changed, err = ConfigurePassword(d, "replacement secure password")
+	if err != nil || !changed {
+		t.Fatalf("replacement ConfigurePassword() = changed %t, error %v", changed, err)
+	}
+	credential, present, err = LoadCredential(d)
+	if err != nil || !present || !credential.Verify("replacement secure password") || credential.Verify("first secure password") {
+		t.Fatalf("replacement credential = present %t, error %v", present, err)
+	}
+	replacementSessionKey, err := LoadOrCreateSessionKey(d)
+	if err != nil {
+		t.Fatalf("reload replacement session key: %v", err)
+	}
+	if bytes.Equal(replacementSessionKey, firstSessionKey) {
+		t.Fatal("password rotation did not invalidate existing sessions")
 	}
 }
 

@@ -230,6 +230,7 @@ function main() {
   brandLogo.height = 34;
   brandLogo.setAttribute("aria-hidden", "true");
   const brandName = document.createElement("span");
+  brandName.className = "app-nav-brand-name";
   brandName.textContent = "Sinkhole Responder";
   brand.append(brandLogo, brandName);
 
@@ -304,6 +305,16 @@ function main() {
   });
   links.addEventListener("click", closeMenu);
 
+  const collapsedNavigation = window.matchMedia("(max-width: 100rem)");
+  function placeHealthControl() {
+    if (collapsedNavigation.matches) {
+      inner.insertBefore(healthControl, menuButton);
+    } else {
+      actions.prepend(healthControl);
+    }
+  }
+  collapsedNavigation.addEventListener("change", placeHealthControl);
+
   const scheme = window.matchMedia("(prefers-color-scheme: dark)");
   scheme.addEventListener("change", () => {
     if (!document.documentElement.dataset.theme) {
@@ -311,9 +322,10 @@ function main() {
     }
   });
 
-  actions.append(healthControl, themeButton, logoutButton);
+  actions.append(themeButton, logoutButton);
   panel.append(links, actions);
   inner.append(brand, menuButton, panel);
+  placeHealthControl();
   nav.append(inner);
   document.dispatchEvent(new CustomEvent("sinkhole:nav-ready"));
   void syncRestartBar(nav);

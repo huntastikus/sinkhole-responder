@@ -24,7 +24,7 @@
       </ol>
 
       <h2>DNS is not redirecting the blocked name</h2>
-      <p>Run <code>dig blocked.example @ADGUARD_IP</code> and confirm the answer is the responder's LAN address. Then check AdGuard Home's Custom IP fields, browser Secure DNS / DNS-over-HTTPS, operating-system DNS, and VPN DNS. Follow the <a class="text-link" href="/help/adguard-home">AdGuard Home setup guide</a>.</p>
+      <p>Run <code>dig blocked.example @DNS_SINKHOLE_IP</code> and confirm the answer is the responder's LAN address. Then check the DNS sinkhole's custom-address or blocking-reply setting, browser Secure DNS / DNS-over-HTTPS, operating-system DNS, and VPN DNS. Follow the <a class="text-link" href="/help/adguard-home">DNS sinkhole setup guide</a>.</p>
 
       <h2>The browser shows a certificate error</h2>
       <p>For local-CA mode, download the public CA and deliberately trust it on that client. For static mode, make sure the certificate covers the original hostname. Do not make <code>curl -k</code> or disabled browser verification the normal fix. Follow <a class="text-link" href="/help/tls-trust">TLS and trusting the CA</a>.</p>

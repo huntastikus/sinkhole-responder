@@ -570,32 +570,221 @@ func applyEnv(cfg *Config) error {
 	if value, ok := os.LookupEnv("SINKHOLE_MANAGEMENT_LISTEN"); ok {
 		cfg.Management.Listen = value
 	}
+	if value, ok := os.LookupEnv("SINKHOLE_STATE_DIR"); ok {
+		cfg.StateDir = value
+	}
+	if err := applyBoolEnv("SINKHOLE_MANAGEMENT_ENABLED", func(value bool) { cfg.Management.Enabled = &value }); err != nil {
+		return err
+	}
+	if err := applyBoolEnv("SINKHOLE_MANAGEMENT_ALLOW_EXTERNAL", func(value bool) { cfg.Management.AllowExternal = value }); err != nil {
+		return err
+	}
 	if value, ok := os.LookupEnv("SINKHOLE_TLS_MODE"); ok {
 		cfg.TLS.Mode = value
 	}
-	if value, ok := os.LookupEnv("SINKHOLE_DEFAULTS_STATUS"); ok {
-		status, err := strconv.Atoi(value)
-		if err != nil {
-			return fmt.Errorf("parse SINKHOLE_DEFAULTS_STATUS: %w", err)
-		}
-		cfg.Defaults.Status = status
+	if err := applyCertificateEnv(cfg); err != nil {
+		return err
+	}
+	if err := applyIntEnv("SINKHOLE_CA_CACHE_SIZE", func(value int) { cfg.TLS.LocalCA.CacheSize = value }); err != nil {
+		return err
+	}
+	if err := applyDurationEnv("SINKHOLE_CA_LEAF_TTL", func(value time.Duration) { cfg.TLS.LocalCA.LeafTTL = value }); err != nil {
+		return err
+	}
+	if err := applyBoolEnv("SINKHOLE_ADMIN_ENABLED", func(value bool) { cfg.Admin.Enabled = value }); err != nil {
+		return err
+	}
+	if value, ok := os.LookupEnv("SINKHOLE_ADMIN_LISTEN"); ok {
+		cfg.Admin.Listen = value
+	}
+	if err := applyBoolEnv("SINKHOLE_ADMIN_TLS_ENABLED", func(value bool) { cfg.Admin.TLS.Enabled = value }); err != nil {
+		return err
+	}
+	if value, ok := os.LookupEnv("SINKHOLE_ADMIN_TLS_LISTEN"); ok {
+		cfg.Admin.TLS.Listen = value
+	}
+	if err := applyBoolEnv("SINKHOLE_ADMIN_TLS_REDIRECT_HTTP", func(value bool) { cfg.Admin.TLS.RedirectHTTP = value }); err != nil {
+		return err
+	}
+	if err := applyDurationEnv("SINKHOLE_ADMIN_SESSION_TTL", func(value time.Duration) { cfg.Admin.SessionTTL = value }); err != nil {
+		return err
+	}
+	if err := applyFloatEnv("SINKHOLE_ADMIN_LOGIN_RATE_PER_IP", func(value float64) { cfg.Admin.LoginRatePerIP = value }); err != nil {
+		return err
+	}
+	if err := applyIntEnv("SINKHOLE_ADMIN_LOGIN_BURST", func(value int) { cfg.Admin.LoginBurst = value }); err != nil {
+		return err
+	}
+	if value, ok := os.LookupEnv("SINKHOLE_RULEPACKS"); ok {
+		cfg.Rulepacks.Enabled = commaSeparated(value)
+	}
+	if err := applyIntEnv("SINKHOLE_DEFAULTS_STATUS", func(value int) { cfg.Defaults.Status = value }); err != nil {
+		return err
+	}
+	if err := applyIntEnv("SINKHOLE_DEFAULTS_BEACON_STATUS", func(value int) { cfg.Defaults.BeaconStatus = value }); err != nil {
+		return err
+	}
+	if value, ok := os.LookupEnv("SINKHOLE_DEFAULTS_MEDIA_RESPONSE"); ok {
+		cfg.Defaults.MediaResponse = value
+	}
+	if value, ok := os.LookupEnv("SINKHOLE_DEFAULTS_CACHE_CONTROL"); ok {
+		cfg.Defaults.CacheControl = value
+	}
+	if err := applyIntEnv("SINKHOLE_MAX_HEADER_BYTES", func(value int) { cfg.Limits.MaxHeaderBytes = value }); err != nil {
+		return err
+	}
+	if err := applyInt64Env("SINKHOLE_MAX_BODY_BYTES", func(value int64) { cfg.Limits.MaxBodyBytes = value }); err != nil {
+		return err
+	}
+	if err := applyDurationEnv("SINKHOLE_READ_TIMEOUT", func(value time.Duration) { cfg.Limits.ReadTimeout = value }); err != nil {
+		return err
+	}
+	if err := applyDurationEnv("SINKHOLE_WRITE_TIMEOUT", func(value time.Duration) { cfg.Limits.WriteTimeout = value }); err != nil {
+		return err
+	}
+	if err := applyDurationEnv("SINKHOLE_IDLE_TIMEOUT", func(value time.Duration) { cfg.Limits.IdleTimeout = value }); err != nil {
+		return err
+	}
+	if err := applyFloatEnv("SINKHOLE_RATE_PER_IP", func(value float64) { cfg.Limits.RatePerIP = value }); err != nil {
+		return err
+	}
+	if err := applyIntEnv("SINKHOLE_RATE_BURST", func(value int) { cfg.Limits.RateBurst = value }); err != nil {
+		return err
 	}
 	if value, ok := os.LookupEnv("SINKHOLE_LOG_LEVEL"); ok {
 		cfg.Logging.Level = value
 	}
-	if value, ok := os.LookupEnv("SINKHOLE_ACCESS_LOG"); ok {
-		var enabled bool
-		switch value {
-		case "true":
-			enabled = true
-		case "false":
-			enabled = false
-		default:
-			return fmt.Errorf("parse SINKHOLE_ACCESS_LOG: must be true or false, got %q", value)
-		}
-		cfg.Logging.AccessLog = &enabled
+	if err := applyBoolEnv("SINKHOLE_ACCESS_LOG", func(value bool) { cfg.Logging.AccessLog = &value }); err != nil {
+		return err
+	}
+	if err := applyBoolEnv("SINKHOLE_LOG_QUERY", func(value bool) { cfg.Logging.LogQuery = value }); err != nil {
+		return err
+	}
+	if err := applyBoolEnv("SINKHOLE_ANONYMIZE_CLIENT", func(value bool) { cfg.Logging.AnonymizeClient = &value }); err != nil {
+		return err
+	}
+	if err := applyBoolEnv("SINKHOLE_JSONP_ENABLED", func(value bool) { cfg.JSONP.Enabled = value }); err != nil {
+		return err
+	}
+	if value, ok := os.LookupEnv("SINKHOLE_JSONP_PARAM"); ok {
+		cfg.JSONP.Param = value
 	}
 
+	return nil
+}
+
+func applyCertificateEnv(cfg *Config) error {
+	staticCert, staticCertSet := os.LookupEnv("SINKHOLE_TLS_CERT_FILE")
+	staticKey, staticKeySet := os.LookupEnv("SINKHOLE_TLS_KEY_FILE")
+	staticHosts, staticHostsSet := os.LookupEnv("SINKHOLE_TLS_HOSTS")
+	if staticCertSet != staticKeySet || staticHostsSet && !staticCertSet {
+		return errors.New("SINKHOLE_TLS_CERT_FILE and SINKHOLE_TLS_KEY_FILE must be set together; SINKHOLE_TLS_HOSTS requires both")
+	}
+	if staticCertSet {
+		if staticCert == "" || staticKey == "" {
+			return errors.New("SINKHOLE_TLS_CERT_FILE and SINKHOLE_TLS_KEY_FILE must not be empty")
+		}
+		cfg.TLS.Static.Certs = []CertPair{{
+			Hosts:    commaSeparated(staticHosts),
+			CertFile: staticCert,
+			KeyFile:  staticKey,
+		}}
+	}
+
+	caCert, caCertSet := os.LookupEnv("SINKHOLE_CA_CERT_FILE")
+	caKey, caKeySet := os.LookupEnv("SINKHOLE_CA_KEY_FILE")
+	if caCertSet != caKeySet {
+		return errors.New("SINKHOLE_CA_CERT_FILE and SINKHOLE_CA_KEY_FILE must be set together")
+	}
+	if caCertSet {
+		if caCert == "" || caKey == "" {
+			return errors.New("SINKHOLE_CA_CERT_FILE and SINKHOLE_CA_KEY_FILE must not be empty")
+		}
+		cfg.TLS.LocalCA.CACert = caCert
+		cfg.TLS.LocalCA.CAKey = caKey
+	}
+
+	adminCert, adminCertSet := os.LookupEnv("SINKHOLE_ADMIN_TLS_CERT_FILE")
+	adminKey, adminKeySet := os.LookupEnv("SINKHOLE_ADMIN_TLS_KEY_FILE")
+	if adminCertSet != adminKeySet {
+		return errors.New("SINKHOLE_ADMIN_TLS_CERT_FILE and SINKHOLE_ADMIN_TLS_KEY_FILE must be set together")
+	}
+	if adminCertSet {
+		if adminCert == "" || adminKey == "" {
+			return errors.New("SINKHOLE_ADMIN_TLS_CERT_FILE and SINKHOLE_ADMIN_TLS_KEY_FILE must not be empty")
+		}
+		cfg.Admin.TLS.CertFile = adminCert
+		cfg.Admin.TLS.KeyFile = adminKey
+	}
+
+	return nil
+}
+
+func applyBoolEnv(name string, apply func(bool)) error {
+	value, ok := os.LookupEnv(name)
+	if !ok {
+		return nil
+	}
+	switch value {
+	case "true":
+		apply(true)
+	case "false":
+		apply(false)
+	default:
+		return fmt.Errorf("parse %s: must be true or false, got %q", name, value)
+	}
+	return nil
+}
+
+func applyIntEnv(name string, apply func(int)) error {
+	value, ok := os.LookupEnv(name)
+	if !ok {
+		return nil
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fmt.Errorf("parse %s: %w", name, err)
+	}
+	apply(parsed)
+	return nil
+}
+
+func applyInt64Env(name string, apply func(int64)) error {
+	value, ok := os.LookupEnv(name)
+	if !ok {
+		return nil
+	}
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parse %s: %w", name, err)
+	}
+	apply(parsed)
+	return nil
+}
+
+func applyFloatEnv(name string, apply func(float64)) error {
+	value, ok := os.LookupEnv(name)
+	if !ok {
+		return nil
+	}
+	parsed, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return fmt.Errorf("parse %s: %w", name, err)
+	}
+	apply(parsed)
+	return nil
+}
+
+func applyDurationEnv(name string, apply func(time.Duration)) error {
+	value, ok := os.LookupEnv(name)
+	if !ok {
+		return nil
+	}
+	parsed, err := time.ParseDuration(value)
+	if err != nil {
+		return fmt.Errorf("parse %s: %w", name, err)
+	}
+	apply(parsed)
 	return nil
 }
 

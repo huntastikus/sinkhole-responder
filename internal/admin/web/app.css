@@ -249,8 +249,13 @@ body {
 
   .app-nav-menu-button {
     display: inline-flex;
+    margin-left: 0;
     align-items: center;
     justify-content: center;
+  }
+
+  .app-nav-health {
+    margin-left: auto;
   }
 
   .app-nav-panel {
@@ -284,20 +289,28 @@ body {
     border-top: 1px solid var(--border);
   }
 
-  .app-nav-health {
-    grid-column: 1 / -1;
-  }
-
-  .app-nav-health-button {
-    width: 100%;
-    justify-content: center;
-  }
-
   .app-nav-health-panel {
-    position: static;
-    width: 100%;
-    margin-top: 0.45rem;
-    box-shadow: none;
+    position: fixed;
+    top: 4.2rem;
+    right: 1rem;
+    width: min(25rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 5.2rem);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 32rem) {
+  .app-nav-inner {
+    gap: 0.55rem;
+  }
+
+  .app-nav-brand-name {
+    display: none;
+  }
+
+  .app-nav-health-button,
+  .app-nav-menu-button {
+    padding-inline: 0.55rem;
   }
 }
 
@@ -2024,6 +2037,56 @@ input[type="file"] {
   width: min(52rem, 100%);
 }
 
+.help-center-shell {
+  width: min(82rem, 100%);
+}
+
+.help-center-header {
+  max-width: 48rem;
+  margin-bottom: 1.5rem;
+}
+
+.help-center-header h1 {
+  margin: 0.2rem 0 0.65rem;
+}
+
+.help-center-header > p:last-child,
+.help-center-section > p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.help-center-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.help-center-section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.help-center-section h2 {
+  margin: 0.15rem 0 0.3rem;
+  font-size: 1.2rem;
+}
+
+.help-center-links {
+  display: grid;
+  margin-top: auto;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.help-center-trust {
+  grid-column: 1 / -1;
+}
+
+.help-center-trust-links {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
 .back-link {
   display: inline-block;
   margin-bottom: 1rem;
@@ -2040,6 +2103,23 @@ input[type="file"] {
 
 .guide-card a {
   overflow-wrap: anywhere;
+}
+
+.guide-download {
+  display: flex;
+  margin: 1rem 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.7rem 1rem;
+}
+
+.guide-download .button {
+  text-decoration: none;
+}
+
+.guide-download small {
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .guide-steps {
@@ -2102,6 +2182,16 @@ input[type="file"] {
 
   .result-actions .button {
     width: 100%;
+  }
+}
+
+@media (max-width: 64rem) {
+  .help-center-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .help-center-trust {
+    grid-column: auto;
   }
 }
 

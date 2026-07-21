@@ -25,9 +25,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/huntastikus/sinkhole-responder/internal/admin"
 	"github.com/huntastikus/sinkhole-responder/internal/config"
 	"github.com/huntastikus/sinkhole-responder/internal/mgmt"
 	"github.com/huntastikus/sinkhole-responder/internal/rules"
+	"github.com/huntastikus/sinkhole-responder/internal/state"
 	"github.com/huntastikus/sinkhole-responder/internal/tlsx"
 )
 
@@ -671,7 +673,7 @@ func TestRunBootstrapsCAAndServesDefaultTLSPlanes(t *testing.T) {
 	go func() {
 		done <- Run(ctx, cfg, "test", discardLogger(), nil, nil, WithReadyFunc(func(addrs []net.Addr) {
 			ready <- addrs
-		}))
+		}), WithAdminPassword("configured secure password"))
 	}()
 	defer cancel()
 
@@ -684,6 +686,14 @@ func TestRunBootstrapsCAAndServesDefaultTLSPlanes(t *testing.T) {
 		t.Fatalf("Run returned before ready: %v", err)
 	case <-time.After(3 * time.Second):
 		t.Fatal("Run did not become ready")
+	}
+	appState, err := state.New(stateDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	credential, present, err := admin.LoadCredential(appState)
+	if err != nil || !present || !credential.Verify("configured secure password") {
+		t.Fatalf("configured admin credential = present %t, error %v", present, err)
 	}
 
 	caPath := filepath.Join(stateDir, "tls", "ca.cert.pem")
@@ -776,6 +786,14 @@ func TestRunRejectsUnsafeLocalCAKeyPermissions(t *testing.T) {
 	err = Run(context.Background(), cfg, "test", discardLogger(), nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "unsafe permissions 0644") {
 		t.Fatalf("Run() = %v, want unsafe key permissions error", err)
+	}
+}
+
+func TestRunRejectsConfiguredPasswordWhenAdminDisabled(t *testing.T) {
+	cfg := testConfig(t)
+	err := Run(context.Background(), cfg, "test", discardLogger(), nil, nil, WithAdminPassword("configured secure password"))
+	if err == nil || !strings.Contains(err.Error(), "admin plane is disabled") {
+		t.Fatalf("Run() = %v, want disabled-admin password error", err)
 	}
 }
 

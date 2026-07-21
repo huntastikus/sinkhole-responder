@@ -19,7 +19,7 @@ func TestHelpTopicsAreServed(t *testing.T) {
 		heading string
 	}{
 		{slug: "quick-start", heading: "Quick start"},
-		{slug: "adguard-home", heading: "AdGuard Home setup"},
+		{slug: "adguard-home", heading: "DNS sinkhole setup"},
 		{slug: "tls-trust", heading: "TLS and trusting the CA"},
 		{slug: "rules-rulepacks", heading: "Rules and rulepacks"},
 		{slug: "adblock-limits", heading: "Adblock-defeat explained + honest limits"},

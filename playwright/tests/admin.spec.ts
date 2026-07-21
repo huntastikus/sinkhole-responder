@@ -57,7 +57,7 @@ test.describe.serial("admin GUI", () => {
     await expect(page.locator("#wizard-progress")).toHaveText("Step 1 of 6");
   });
 
-  test("wizard enables recommended protection and renders AdGuard Home YAML", async () => {
+  test("wizard enables recommended protection and renders DNS sinkhole guidance", async () => {
     await page.getByLabel("Or enter an address").fill("127.0.0.1");
     await page.getByRole("button", { name: "Next" }).click();
     await expect(page.getByRole("heading", { name: "Choose HTTP or HTTPS placeholders" })).toBeVisible();
@@ -70,7 +70,7 @@ test.describe.serial("admin GUI", () => {
     await expect(page.locator("#protection-status")).toHaveText("Recommended rule packs are enabled.");
     await page.getByRole("button", { name: "Next" }).click();
 
-    await expect(page.getByRole("heading", { name: "Point AdGuard Home here" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Point blocked DNS names here" })).toBeVisible();
     await expect(page.locator("#agh-ip")).toHaveText("127.0.0.1");
     await expect(page.locator("#agh-yaml")).toHaveValue(/blocking_mode: custom_ip/);
     await expect(page.locator("#agh-yaml")).toHaveValue(/blocking_ipv4: 127\.0\.0\.1/);
@@ -130,11 +130,13 @@ test.describe.serial("admin GUI", () => {
     for (const viewport of [
       { width: 1800, height: 1100 },
       { width: 390, height: 844 },
+      { width: 320, height: 568 },
     ]) {
       await page.setViewportSize(viewport);
       for (const path of authenticatedPagePaths) {
         await page.goto(`${adminBaseURL}${path}`);
         await expect(page.locator("#app-nav")).toBeVisible();
+        await expect(page.locator("#system-health-button")).toBeVisible();
         await expect(page.locator("h1")).toHaveCount(1);
         const overflowingElements = await page.evaluate(() => {
           const viewportWidth = document.documentElement.clientWidth;

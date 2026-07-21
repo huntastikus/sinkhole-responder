@@ -9,36 +9,67 @@
 </head>
 <body>
   <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
-  <main class="settings-shell help-shell">
+  <main class="settings-shell help-shell help-center-shell">
     <a class="text-link back-link" href="/">← Back to dashboard</a>
-    <article class="config-card guide-card">
+    <header class="help-center-header">
       <p class="eyebrow">Guides and explanations</p>
       <h1>Help center</h1>
-      <p>Start with the quick guide, or choose the topic that matches what you are trying to do. These pages stay on the responder and need no internet connection.</p>
+      <p>Choose the outcome you need. Every guide is stored on this responder and works without an internet connection.</p>
+    </header>
 
-      <h2>Set up and operate</h2>
-      <ul class="guide-links">
-        <li><a href="/help/quick-start"><span>Quick start</span><span aria-hidden="true">→</span></a></li>
-        <li><a href="/help/adguard-home"><span>AdGuard Home setup</span><span aria-hidden="true">→</span></a></li>
-        <li><a href="/help/tls-trust"><span>TLS and trusting the CA</span><span aria-hidden="true">→</span></a></li>
-        <li><a href="/help/rules-rulepacks"><span>Rules and rulepacks</span><span aria-hidden="true">→</span></a></li>
-        <li><a href="/help/adblock-limits"><span>Adblock-defeat explained + honest limits</span><span aria-hidden="true">→</span></a></li>
-        <li><a href="/help/security"><span>Security and hardening</span><span aria-hidden="true">→</span></a></li>
-        <li><a href="/help/troubleshooting"><span>Troubleshooting</span><span aria-hidden="true">→</span></a></li>
-      </ul>
+    <div class="help-center-grid">
+      <section class="config-card help-center-section" aria-labelledby="help-start-heading">
+        <p class="eyebrow">01 · Start here</p>
+        <h2 id="help-start-heading">Set up the traffic path</h2>
+        <p>Connect your DNS sinkhole, choose HTTP or HTTPS, and verify the first response.</p>
+        <ul class="guide-links help-center-links">
+          <li><a href="/help/quick-start"><span>Quick start</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/adguard-home"><span>DNS sinkhole setup</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/tls-trust"><span>TLS and CA trust</span><span aria-hidden="true">→</span></a></li>
+        </ul>
+      </section>
 
-      <h2>Trust the CA on your device</h2>
-      <p>Use these only for a local CA that you deliberately created for devices you control.</p>
-      <ul class="guide-links">
-        <li><a href="/help/trust-windows"><span>Windows</span><span aria-hidden="true">→</span></a></li>
-        <li><a href="/help/trust-macos"><span>macOS</span><span aria-hidden="true">→</span></a></li>
-        <li><a href="/help/trust-ios"><span>iOS / iPadOS</span><span aria-hidden="true">→</span></a></li>
-        <li><a href="/help/trust-android"><span>Android</span><span aria-hidden="true">→</span></a></li>
-        <li><a href="/help/trust-debian"><span>Debian / Ubuntu</span><span aria-hidden="true">→</span></a></li>
-        <li><a href="/help/trust-firefox"><span>Firefox</span><span aria-hidden="true">→</span></a></li>
-        <li><a href="/help/trust-chrome"><span>Chrome / Chromium</span><span aria-hidden="true">→</span></a></li>
-      </ul>
-    </article>
+      <section class="config-card help-center-section" aria-labelledby="help-operate-heading">
+        <p class="eyebrow">02 · Operate</p>
+        <h2 id="help-operate-heading">Tune responses safely</h2>
+        <p>Manage response behavior, understand the security boundary, and set realistic expectations.</p>
+        <ul class="guide-links help-center-links">
+          <li><a href="/help/rules-rulepacks"><span>Rules and rulepacks</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/security"><span>Security and hardening</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/adblock-limits"><span>Capabilities and limits</span><span aria-hidden="true">→</span></a></li>
+        </ul>
+      </section>
+
+      <section class="config-card help-center-section" aria-labelledby="help-diagnose-heading">
+        <p class="eyebrow">03 · Diagnose</p>
+        <h2 id="help-diagnose-heading">Follow the request</h2>
+        <p>Confirm DNS, certificate trust, rule selection, and the final placeholder response.</p>
+        <ul class="guide-links help-center-links">
+          <li><a href="/help/troubleshooting"><span>Troubleshooting guide</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/tools"><span>Test a domain</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/tools/detector"><span>Run the detector</span><span aria-hidden="true">→</span></a></li>
+        </ul>
+      </section>
+
+      <section class="config-card help-center-section help-center-trust" aria-labelledby="help-trust-heading">
+        <p class="eyebrow">04 · Client trust</p>
+        <h2 id="help-trust-heading">Trust the CA on a device</h2>
+        <p>Download the public CA certificate, then follow only the guide for the device you control.</p>
+        <div class="guide-download">
+          <a class="button button-secondary" href="/api/ca/download" download="sinkhole-ca.crt">Download CA certificate</a>
+          <small>Generate a CA on the TLS page first if no certificate is available.</small>
+        </div>
+        <ul class="guide-links help-center-trust-links">
+          <li><a href="/help/trust-windows"><span>Windows</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/trust-macos"><span>macOS</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/trust-ios"><span>iOS / iPadOS</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/trust-android"><span>Android</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/trust-debian"><span>Debian / Ubuntu</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/trust-firefox"><span>Firefox</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/trust-chrome"><span>Chrome / Chromium</span><span aria-hidden="true">→</span></a></li>
+        </ul>
+      </section>
+    </div>
   </main>
   <script type="module" src="/assets/nav.js"></script>
 </body>
