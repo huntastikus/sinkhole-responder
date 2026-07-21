@@ -36,6 +36,7 @@ Module: `git.kopenczei.net/arpad/sinkhole-responder`
 - [Configuration reference](#configuration-reference)
 - [Honest limitations](#honest-limitations)
 - [Build, test, and development](#build-test-and-development)
+- [Releases](#releases)
 - [License](#license)
 
 ## How it works
@@ -772,7 +773,32 @@ Access behavior.
 
 CI runs formatting/vetting, builds, race-enabled tests, four fuzz targets,
 Linux `amd64`/`arm64` builds, a Docker build/smoke test, and the Chromium
-Playwright suite. It does not publish images or binaries.
+Playwright suite.
+
+## Releases
+
+Releases use conventional commit titles and an automatically maintained Release
+Please PR. A merged `fix:` commit proposes a patch release, `feat:` proposes a
+minor release, and a commit with `!` or a `BREAKING CHANGE` footer proposes a
+major release after `1.0.0` (or the next minor while the project is pre-1.0).
+
+After releasable work reaches `main` and CI passes, the release workflow creates
+or updates the release PR and publishes a multi-platform Docker image for
+`linux/amd64` and `linux/arm64`:
+
+```text
+huntastikus/sinkhole-responder:X.Y.Z-rc
+```
+
+The RC tag is updated when more work is merged for the same proposed release;
+the accompanying `sha-<commit>` image tags are immutable. The admin UI displays
+RC builds as `vX.Y.Z-RC` and approved releases as `vX.Y.Z`. Test the RC, then
+approve the release by reviewing and merging the Release Please PR. That merge
+creates the `vX.Y.Z` tag, updates `CHANGELOG.md`, publishes a documented GitHub
+Release, and pushes both `huntastikus/sinkhole-responder:X.Y.Z` and `:latest`.
+The repository must allow GitHub Actions to create pull requests under
+**Settings → Actions → General → Workflow permissions**; the workflow requests
+only the `contents: write` and `pull-requests: write` permissions it needs.
 
 ## License
 

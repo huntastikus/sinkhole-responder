@@ -6,6 +6,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"html/template"
 	"io/fs"
 	"log/slog"
 	"net"
@@ -60,6 +61,7 @@ type Server struct {
 	router          *http.ServeMux
 	web             fs.FS
 	logger          *slog.Logger
+	displayVersion  string
 	sessionKey      []byte
 	credentialFound atomic.Bool
 	loginLimitersMu sync.Mutex
@@ -101,12 +103,17 @@ func New(deps Deps) (*Server, error) {
 	if logger == nil {
 		logger = slog.Default()
 	}
+	displayVersion := "dev"
+	if deps.Metrics != nil {
+		displayVersion = formatDisplayVersion(deps.Metrics.Snapshot().Version)
+	}
 
 	server := &Server{
 		deps:           deps,
 		router:         http.NewServeMux(),
 		web:            web,
 		logger:         logger,
+		displayVersion: displayVersion,
 		sessionKey:     sessionKey,
 		loginLimiters:  make(map[string]*rate.Limiter),
 		adminTLSActive: deps.Cfg().Admin.TLS.Enabled,
@@ -272,8 +279,9 @@ func (s *Server) serveWebPage(w http.ResponseWriter, name string) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	html := strings.Replace(string(page), "<body>", "<body>\n  "+systemHealthBanner, 1)
-	html = strings.Replace(html, "</body>", "  "+systemHealthScript+"\n</body>", 1)
+	footer := `<footer class="app-footer"><span>` + template.HTMLEscapeString(s.displayVersion) + `</span></footer>`
+	html := strings.Replace(string(page), "<body>", "<body class=\"admin-body\">\n  "+systemHealthBanner, 1)
+	html = strings.Replace(html, "</body>", "  "+footer+"\n  "+systemHealthScript+"\n</body>", 1)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(html))
 }

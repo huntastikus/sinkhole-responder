@@ -20,8 +20,8 @@ FROM scratch
 
 LABEL org.opencontainers.image.title="Sinkhole Responder" \
       org.opencontainers.image.description="A hardened HTTP sinkhole responder for blocked resources" \
-      org.opencontainers.image.source="https://git.kopenczei.net/arpad/sinkhole-responder" \
-      org.opencontainers.image.licenses="MIT"
+      org.opencontainers.image.source="https://github.com/huntastikus/sinkhole-responder" \
+      org.opencontainers.image.licenses="GPL-2.0-only"
 
 # The service makes no outbound TLS connections, so a scratch image without a CA
 # certificate bundle is intentional.

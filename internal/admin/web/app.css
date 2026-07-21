@@ -48,6 +48,15 @@ body {
   color: var(--text);
 }
 
+.admin-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-body > main {
+  flex: 1 0 auto;
+}
+
 [hidden] {
   display: none !important;
 }
@@ -162,6 +171,15 @@ body {
 .app-nav-menu-button {
   display: none;
   margin-left: auto;
+}
+
+.app-footer {
+  width: min(92rem, 100%);
+  margin: 0 auto;
+  padding: 0.8rem clamp(1rem, 3vw, 2rem) 1.25rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-align: center;
 }
 
 @media (max-width: 58rem) {
@@ -2132,6 +2150,13 @@ input[type="file"] {
   color: var(--muted);
   font-size: 0.76rem;
   line-height: 1.45;
+}
+
+.auth-version {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-align: center;
 }
 
 @media (prefers-reduced-motion: no-preference) {

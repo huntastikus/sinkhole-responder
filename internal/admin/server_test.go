@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"git.kopenczei.net/arpad/sinkhole-responder/internal/config"
+	"git.kopenczei.net/arpad/sinkhole-responder/internal/mgmt"
 	"git.kopenczei.net/arpad/sinkhole-responder/internal/state"
 )
 
@@ -120,6 +121,25 @@ func TestHandlerRoutes(t *testing.T) {
 	}
 }
 
+func TestAdminPageShowsReleaseCandidateVersion(t *testing.T) {
+	t.Parallel()
+
+	server := newTestServer(t, config.AdminConfig{})
+	saveTestCredential(t, server, "correct horse battery staple")
+	request := httptest.NewRequest(http.MethodGet, "/config", nil)
+	request.AddCookie(validSessionCookie(t, server))
+	response := httptest.NewRecorder()
+
+	server.Handler().ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
+	}
+	if !strings.Contains(response.Body.String(), `<footer class="app-footer"><span>v1.2.3-RC</span></footer>`) {
+		t.Errorf("admin page does not show the normalized RC version: %q", response.Body.String())
+	}
+}
+
 func TestHandlerRecoversPanic(t *testing.T) {
 	t.Parallel()
 
@@ -202,9 +222,10 @@ func newTestServer(t *testing.T, adminConfig config.AdminConfig) *Server {
 		t.Fatalf("state.New: %v", err)
 	}
 	server, err := New(Deps{
-		Cfg:    func() *config.Config { return cfg },
-		State:  stateDir,
-		Logger: logger,
+		Cfg:     func() *config.Config { return cfg },
+		Metrics: mgmt.NewMetrics("1.2.3-rc"),
+		State:   stateDir,
+		Logger:  logger,
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)

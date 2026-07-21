@@ -1,12 +1,15 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  pull_request:
+    branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -142,16 +145,19 @@ jobs:
         run: |
           container_id="$(docker run -d --read-only --cap-drop ALL \
             --cap-add NET_BIND_SERVICE --security-opt no-new-privileges:true \
-            --tmpfs /tmp -p 18080:80 -p 18081:8080 sinkhole-responder:ci)"
+            --tmpfs /tmp -p 18080:80 -p 18081:8080 -p 18443:8443 \
+            sinkhole-responder:ci)"
           trap 'docker stop "$container_id"' EXIT
           sleep 2
           for attempt in 1 2 3 4 5; do
             if data_status="$(curl -fsS -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/ad.js)" && \
-              admin_status="$(curl -fsS -o /dev/null -w '%{http_code}' http://127.0.0.1:18081/setup)" && \
-              [ "$data_status" = 200 ] && [ "$admin_status" = 200 ]; then
+              admin_redirect_status="$(curl -fsS -o /dev/null -w '%{http_code}' http://127.0.0.1:18081/setup)" && \
+              admin_tls_status="$(curl -kfsS -o /dev/null -w '%{http_code}' https://127.0.0.1:18443/setup)" && \
+              [ "$data_status" = 200 ] && [ "$admin_redirect_status" = 301 ] && \
+              [ "$admin_tls_status" = 200 ]; then
               exit 0
             fi
-            echo "Smoke test attempt $attempt did not return HTTP 200 from both data and admin planes"
+            echo "Smoke test attempt $attempt did not return the expected data, redirect, and HTTPS admin statuses"
             sleep 1
           done
           docker logs "$container_id"
