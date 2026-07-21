@@ -81,6 +81,11 @@ func TestWebAssetsWireSharedNavigation(t *testing.T) {
 	if !strings.Contains(string(nav), `"/help/"`) {
 		t.Error("shared navigation module is missing the /help/ link")
 	}
+	for _, want := range []string{`id = "system-health-button"`, `id = "system-health-panel"`, `sinkhole:nav-ready`} {
+		if !strings.Contains(string(nav), want) {
+			t.Errorf("shared navigation module is missing health control wiring %q", want)
+		}
+	}
 
 	for _, name := range []string{"login.html", "setup.html"} {
 		t.Run(name+"_pre_auth", func(t *testing.T) {

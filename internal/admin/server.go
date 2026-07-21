@@ -35,12 +35,16 @@ const (
 	adminShutdownTimeout   = 5 * time.Second
 	adminMaxHeaderBytes    = 16 * 1024
 	faviconLink            = `<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">`
-	systemHealthBanner     = `<section id="system-health-banner" class="system-health-banner" role="status" aria-live="polite" aria-atomic="true" hidden>
-    <div class="system-health-overall">
-      <span id="system-health-dot" class="system-health-dot" aria-hidden="true"></span>
-      <strong>System <span id="system-health-overall">checking</span></strong>
+	systemHealthAlert      = `<section id="system-health-alert" class="system-health-alert" aria-atomic="true" hidden>
+    <div class="system-health-alert-heading">
+      <span id="system-health-alert-dot" class="system-health-dot" aria-hidden="true"></span>
+      <div>
+        <strong id="system-health-alert-title">System needs attention</strong>
+        <p id="system-health-alert-summary"></p>
+      </div>
     </div>
-    <ul id="system-health-checks" class="system-health-checks" aria-label="System health checks"></ul>
+    <ul id="system-health-alert-checks" class="system-health-alert-checks" aria-label="System health issues"></ul>
+    <a class="system-health-alert-action" href="/logs">View logs</a>
   </section>`
 	systemHealthScript = `<script type="module" src="/assets/status.js"></script>`
 )
@@ -295,7 +299,12 @@ func (s *Server) serveWebPage(w http.ResponseWriter, name string) {
 	}
 	footer := `<footer class="app-footer"><span>` + template.HTMLEscapeString(s.displayVersion) + `</span></footer>`
 	html := strings.Replace(string(page), "</head>", "  "+faviconLink+"\n</head>", 1)
-	html = strings.Replace(html, "<body>", "<body class=\"admin-body\">\n  "+systemHealthBanner, 1)
+	html = strings.Replace(html, "<body>", "<body class=\"admin-body\">", 1)
+	if strings.Contains(html, "</nav>") {
+		html = strings.Replace(html, "</nav>", "</nav>\n  "+systemHealthAlert, 1)
+	} else {
+		html = strings.Replace(html, "<body class=\"admin-body\">", "<body class=\"admin-body\">\n  "+systemHealthAlert, 1)
+	}
 	html = strings.Replace(html, "</body>", "  "+footer+"\n  "+systemHealthScript+"\n</body>", 1)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(html))

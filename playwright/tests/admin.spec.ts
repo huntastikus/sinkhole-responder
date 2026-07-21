@@ -92,6 +92,19 @@ test.describe.serial("admin GUI", () => {
     await expect(page.locator("#gauge svg")).toBeVisible();
     await expect(page.locator('[data-metric="requests_total"]')).toHaveText(/^\d+$/);
     await expect(page.locator('[data-metric="rules_loaded"]')).toHaveText(/^[1-9]\d*$/);
+
+    const healthButton = page.locator("#system-health-button");
+    await expect(healthButton).toContainText("System amber");
+    await expect(page.locator("#system-health-alert")).toBeVisible();
+    await expect(page.locator("#system-health-alert-checks")).toContainText("tls");
+
+    await healthButton.click();
+    await expect(healthButton).toHaveAttribute("aria-expanded", "true");
+    await expect(page.locator("#system-health-panel")).toBeVisible();
+    await expect(page.locator("#system-health-checks")).toContainText("listeners");
+    await page.keyboard.press("Escape");
+    await expect(healthButton).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator("#system-health-panel")).toBeHidden();
   });
 
   test("navigation collapses before its links can wrap", async () => {
