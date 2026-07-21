@@ -708,15 +708,18 @@ default** (`logging.log_query: false`). Client addresses are anonymized by
 default to IPv4 `/24` or IPv6 `/48`. Set `logging.access_log: false` to disable
 access logs entirely.
 
-POST body logging is also **disabled by default**. When
-`logging.log_post_body: true`, the responder records up to
-`logging.post_body_log_max_bytes` bytes (default `4096`, maximum `65536`) from
-UTF-8 text, JSON, and URL-encoded form bodies. Common password, secret, token,
+Request body logging is also **disabled by default**. When
+`logging.log_request_body: true`, the responder records up to
+`logging.request_body_log_max_bytes` bytes (default `4096`, maximum `65536`)
+from methods selected in `logging.request_body_methods`. `POST` is selected by
+default; `PUT`, `PATCH`, and `DELETE` can be added individually. GET, HEAD, and
+OPTIONS bodies are never captured. Supported bodies are UTF-8 text, JSON, and
+URL-encoded forms. Common password, secret, token,
 session, cookie, credential, and API-key fields in JSON/forms are replaced with
 `[REDACTED]`. Multipart, compressed/encoded, binary, invalid JSON/form, and
 non-UTF-8 bodies are omitted; long text/form bodies are marked as truncated.
-Captured records use `post_body`; `post_body_redacted` and
-`post_body_truncated` describe processing, while `post_body_omitted` explains
+Captured records use `request_body`; `request_body_redacted` and
+`request_body_truncated` describe processing, while `request_body_omitted` explains
 why an unsafe or unreadable body was not captured.
 
 > **Sensitive-data warning:** body redaction is best-effort and cannot identify
@@ -771,8 +774,9 @@ startup and reload. Boolean values must be exactly `true` or `false`.
 | `logging` | `level` | `"info"` | `SINKHOLE_LOG_LEVEL`; `debug`, `info`, `warn`, or `error` |
 | `logging` | `access_log` | `true` | `SINKHOLE_ACCESS_LOG` |
 | `logging` | `log_query` | `false` | `SINKHOLE_LOG_QUERY`; enabling may expose tokens |
-| `logging` | `log_post_body` | `false` | `SINKHOLE_LOG_POST_BODY`; opt-in POST body capture; may expose sensitive data |
-| `logging` | `post_body_log_max_bytes` | `4096` | `SINKHOLE_POST_BODY_LOG_MAX_BYTES`; capture cap from `1` through `65536` |
+| `logging` | `log_request_body` | `false` | `SINKHOLE_LOG_REQUEST_BODY`; opt-in request body capture; may expose sensitive data |
+| `logging` | `request_body_methods` | `["POST"]` | `SINKHOLE_REQUEST_BODY_METHODS`; comma-separated subset of `POST`, `PUT`, `PATCH`, `DELETE` |
+| `logging` | `request_body_log_max_bytes` | `4096` | `SINKHOLE_REQUEST_BODY_LOG_MAX_BYTES`; capture cap from `1` through `65536` |
 | `logging` | `anonymize_client` | `true` | `SINKHOLE_ANONYMIZE_CLIENT` |
 | `jsonp` | `enabled` | `false` | `SINKHOLE_JSONP_ENABLED` |
 | `jsonp` | `param` | `"callback"` | `SINKHOLE_JSONP_PARAM`; non-empty when enabled |

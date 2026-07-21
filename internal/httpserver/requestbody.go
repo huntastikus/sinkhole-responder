@@ -16,15 +16,15 @@ import (
 
 const redactedValue = "[REDACTED]"
 
-type postBodyKind uint8
+type requestBodyKind uint8
 
 const (
-	postBodyText postBodyKind = iota
-	postBodyJSON
-	postBodyForm
+	requestBodyText requestBodyKind = iota
+	requestBodyJSON
+	requestBodyForm
 )
 
-type postBodyLog struct {
+type requestBodyLog struct {
 	value     string
 	omitted   string
 	truncated bool
@@ -35,7 +35,7 @@ type boundedBodyCapture struct {
 	bytes     []byte
 	limit     int
 	truncated bool
-	kind      postBodyKind
+	kind      requestBodyKind
 }
 
 func (c *boundedBodyCapture) Write(data []byte) (int, error) {
@@ -54,28 +54,38 @@ func (c *boundedBodyCapture) Write(data []byte) (int, error) {
 	return written, nil
 }
 
-func preparePostBodyCapture(cfg *config.Config, r *http.Request) (*boundedBodyCapture, *postBodyLog) {
-	if cfg == nil || !cfg.Logging.LogPostBody || (cfg.Logging.AccessLog != nil && !*cfg.Logging.AccessLog) {
+func prepareRequestBodyCapture(cfg *config.Config, r *http.Request) (*boundedBodyCapture, *requestBodyLog) {
+	if cfg == nil || !cfg.Logging.LogRequestBody || !requestBodyMethodEnabled(cfg.Logging.RequestBodyMethods, r.Method) ||
+		(cfg.Logging.AccessLog != nil && !*cfg.Logging.AccessLog) {
 		return nil, nil
 	}
 	if encoding := strings.TrimSpace(r.Header.Get("Content-Encoding")); encoding != "" && !strings.EqualFold(encoding, "identity") {
-		return nil, &postBodyLog{omitted: "encoded body"}
+		return nil, &requestBodyLog{omitted: "encoded body"}
 	}
 
-	kind, reason := classifyPostBody(r.Header.Get("Content-Type"))
+	kind, reason := classifyRequestBody(r.Header.Get("Content-Type"))
 	if reason != "" {
-		return nil, &postBodyLog{omitted: reason}
+		return nil, &requestBodyLog{omitted: reason}
 	}
-	limit := cfg.Logging.PostBodyLogMaxBytes
+	limit := cfg.Logging.RequestBodyLogMaxBytes
 	if limit < 1 {
-		limit = config.DefaultPostBodyLogMaxBytes
+		limit = config.DefaultRequestBodyLogMaxBytes
 	}
 	return &boundedBodyCapture{limit: int(limit), kind: kind}, nil
 }
 
-func classifyPostBody(contentType string) (postBodyKind, string) {
+func requestBodyMethodEnabled(methods []string, requestMethod string) bool {
+	for _, method := range methods {
+		if strings.EqualFold(strings.TrimSpace(method), requestMethod) {
+			return true
+		}
+	}
+	return false
+}
+
+func classifyRequestBody(contentType string) (requestBodyKind, string) {
 	if strings.TrimSpace(contentType) == "" {
-		return postBodyText, ""
+		return requestBodyText, ""
 	}
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
@@ -84,11 +94,11 @@ func classifyPostBody(contentType string) (postBodyKind, string) {
 	mediaType = strings.ToLower(mediaType)
 	switch {
 	case mediaType == "application/json", strings.HasSuffix(mediaType, "+json"):
-		return postBodyJSON, ""
+		return requestBodyJSON, ""
 	case mediaType == "application/x-www-form-urlencoded":
-		return postBodyForm, ""
+		return requestBodyForm, ""
 	case strings.HasPrefix(mediaType, "text/"):
-		return postBodyText, ""
+		return requestBodyText, ""
 	case strings.HasPrefix(mediaType, "multipart/"):
 		return 0, "multipart body"
 	default:
@@ -96,7 +106,7 @@ func classifyPostBody(contentType string) (postBodyKind, string) {
 	}
 }
 
-func (c *boundedBodyCapture) finish() *postBodyLog {
+func (c *boundedBodyCapture) finish() *requestBodyLog {
 	data := c.bytes
 	if !utf8.Valid(data) && c.truncated {
 		for removed := 0; removed < utf8.UTFMax-1 && len(data) > 0 && !utf8.Valid(data); removed++ {
@@ -104,25 +114,25 @@ func (c *boundedBodyCapture) finish() *postBodyLog {
 		}
 	}
 	if !utf8.Valid(data) {
-		return &postBodyLog{omitted: "non-UTF-8 body", truncated: c.truncated}
+		return &requestBodyLog{omitted: "non-UTF-8 body", truncated: c.truncated}
 	}
 
-	result := &postBodyLog{value: string(data), truncated: c.truncated}
+	result := &requestBodyLog{value: string(data), truncated: c.truncated}
 	switch c.kind {
-	case postBodyJSON:
+	case requestBodyJSON:
 		if c.truncated {
-			return &postBodyLog{omitted: "truncated JSON body", truncated: true}
+			return &requestBodyLog{omitted: "truncated JSON body", truncated: true}
 		}
 		value, redacted, ok := redactJSON(data)
 		if !ok {
-			return &postBodyLog{omitted: "invalid JSON body"}
+			return &requestBodyLog{omitted: "invalid JSON body"}
 		}
 		result.value = value
 		result.redacted = redacted
-	case postBodyForm:
+	case requestBodyForm:
 		value, redacted, err := redactForm(string(data))
 		if err != nil {
-			return &postBodyLog{omitted: "invalid form body", truncated: c.truncated}
+			return &requestBodyLog{omitted: "invalid form body", truncated: c.truncated}
 		}
 		result.value = value
 		result.redacted = redacted

@@ -148,7 +148,7 @@ func TestLoginIncludesVersionPlaceholder(t *testing.T) {
 	}
 }
 
-func TestPostBodyLoggingUIWarnsAboutSensitiveData(t *testing.T) {
+func TestRequestBodyLoggingUIWarnsAboutSensitiveData(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct {
@@ -158,8 +158,10 @@ func TestPostBodyLoggingUIWarnsAboutSensitiveData(t *testing.T) {
 		{
 			name: "config.html",
 			want: []string{
-				`data-config-path="logging.log_post_body"`,
-				`data-config-path="logging.post_body_log_max_bytes"`,
+				`data-config-path="logging.log_request_body"`,
+				`data-config-path="logging.request_body_log_max_bytes"`,
+				`data-request-body-method`,
+				`value="DELETE"`,
 				"Sensitive-data risk",
 				"Redaction is best-effort",
 			},

@@ -21,10 +21,10 @@ func (s *Server) finishRequest(recorder *statusRecorder, r *http.Request, info *
 	}
 	duration := time.Since(info.start)
 	s.metrics.ObserveRequest(info.kind, status, duration)
-	logAccess(s.accessLogger, info.state.cfg, r, info.rule, info.kind, status, duration, info.postBody)
+	logAccess(s.accessLogger, info.state.cfg, r, info.rule, info.kind, status, duration, info.requestBody)
 }
 
-func logAccess(logger *slog.Logger, cfg *config.Config, r *http.Request, rule, kind string, status int, duration time.Duration, postBody *postBodyLog) {
+func logAccess(logger *slog.Logger, cfg *config.Config, r *http.Request, rule, kind string, status int, duration time.Duration, requestBody *requestBodyLog) {
 	if cfg != nil && cfg.Logging.AccessLog != nil && !*cfg.Logging.AccessLog {
 		return
 	}
@@ -41,7 +41,7 @@ func logAccess(logger *slog.Logger, cfg *config.Config, r *http.Request, rule, k
 	if rule != "" {
 		attrs = append(attrs, slog.String("rule", rule))
 	}
-	attrs = append(attrs, postBodyLogAttrs(postBody)...)
+	attrs = append(attrs, requestBodyLogAttrs(requestBody)...)
 	attrs = append(attrs,
 		slog.String("kind", kind),
 		slog.Int("status", status),
@@ -58,21 +58,21 @@ func requestPath(r *http.Request) string {
 	return r.URL.Path
 }
 
-func postBodyLogAttrs(body *postBodyLog) []slog.Attr {
+func requestBodyLogAttrs(body *requestBodyLog) []slog.Attr {
 	if body == nil {
 		return nil
 	}
 	attrs := make([]slog.Attr, 0, 3)
 	if body.omitted != "" {
-		attrs = append(attrs, slog.String("post_body_omitted", body.omitted))
+		attrs = append(attrs, slog.String("request_body_omitted", body.omitted))
 	} else {
-		attrs = append(attrs, slog.String("post_body", body.value))
+		attrs = append(attrs, slog.String("request_body", body.value))
 	}
 	if body.truncated {
-		attrs = append(attrs, slog.Bool("post_body_truncated", true))
+		attrs = append(attrs, slog.Bool("request_body_truncated", true))
 	}
 	if body.redacted {
-		attrs = append(attrs, slog.Bool("post_body_redacted", true))
+		attrs = append(attrs, slog.Bool("request_body_redacted", true))
 	}
 	return attrs
 }

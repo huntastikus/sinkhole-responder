@@ -991,6 +991,32 @@ select[aria-invalid="true"] {
   overflow-wrap: anywhere;
 }
 
+.request-body-methods {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+}
+
+.request-body-methods > legend {
+  padding: 0 0.3rem;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.request-body-method-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 0.6rem;
+}
+
+.request-body-methods .field-error {
+  display: block;
+}
+
 .listener-columns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

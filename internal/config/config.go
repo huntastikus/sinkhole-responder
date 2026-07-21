@@ -107,17 +107,18 @@ type LimitsConfig struct {
 }
 
 type LoggingConfig struct {
-	Level               string `yaml:"level"`
-	AccessLog           *bool  `yaml:"access_log"`
-	LogQuery            bool   `yaml:"log_query"`
-	LogPostBody         bool   `yaml:"log_post_body"`
-	PostBodyLogMaxBytes int64  `yaml:"post_body_log_max_bytes"`
-	AnonymizeClient     *bool  `yaml:"anonymize_client"`
+	Level                  string   `yaml:"level"`
+	AccessLog              *bool    `yaml:"access_log"`
+	LogQuery               bool     `yaml:"log_query"`
+	LogRequestBody         bool     `yaml:"log_request_body"`
+	RequestBodyMethods     []string `yaml:"request_body_methods"`
+	RequestBodyLogMaxBytes int64    `yaml:"request_body_log_max_bytes"`
+	AnonymizeClient        *bool    `yaml:"anonymize_client"`
 }
 
 const (
-	DefaultPostBodyLogMaxBytes int64 = 4 << 10
-	MaxPostBodyLogBytes        int64 = 64 << 10
+	DefaultRequestBodyLogMaxBytes int64 = 4 << 10
+	MaxRequestBodyLogBytes        int64 = 64 << 10
 )
 
 type JSONPConfig struct {
@@ -266,9 +267,25 @@ func (c *Config) Validate() error {
 	default:
 		return fmt.Errorf("logging.level must be debug, info, warn, or error, got %q", c.Logging.Level)
 	}
-	if c.Logging.PostBodyLogMaxBytes < 0 || c.Logging.PostBodyLogMaxBytes > MaxPostBodyLogBytes ||
-		c.Logging.LogPostBody && c.Logging.PostBodyLogMaxBytes < 1 {
-		return fmt.Errorf("logging.post_body_log_max_bytes must be between 1 and %d, got %d", MaxPostBodyLogBytes, c.Logging.PostBodyLogMaxBytes)
+	if c.Logging.RequestBodyLogMaxBytes < 0 || c.Logging.RequestBodyLogMaxBytes > MaxRequestBodyLogBytes ||
+		c.Logging.LogRequestBody && c.Logging.RequestBodyLogMaxBytes < 1 {
+		return fmt.Errorf("logging.request_body_log_max_bytes must be between 1 and %d, got %d", MaxRequestBodyLogBytes, c.Logging.RequestBodyLogMaxBytes)
+	}
+	if c.Logging.LogRequestBody && len(c.Logging.RequestBodyMethods) == 0 {
+		return errors.New("logging.request_body_methods must select at least one method when request body logging is enabled")
+	}
+	seenBodyMethods := make(map[string]struct{}, len(c.Logging.RequestBodyMethods))
+	for _, method := range c.Logging.RequestBodyMethods {
+		normalized := strings.ToUpper(strings.TrimSpace(method))
+		switch normalized {
+		case "POST", "PUT", "PATCH", "DELETE":
+		default:
+			return fmt.Errorf("logging.request_body_methods contains unsupported method %q; use POST, PUT, PATCH, or DELETE", method)
+		}
+		if _, duplicate := seenBodyMethods[normalized]; duplicate {
+			return fmt.Errorf("logging.request_body_methods contains duplicate method %q", method)
+		}
+		seenBodyMethods[normalized] = struct{}{}
 	}
 
 	if c.TLS.Mode == "static" {
@@ -402,10 +419,11 @@ func defaultConfig() *Config {
 			RateBurst:      50,
 		},
 		Logging: LoggingConfig{
-			Level:               "info",
-			AccessLog:           &accessLog,
-			PostBodyLogMaxBytes: DefaultPostBodyLogMaxBytes,
-			AnonymizeClient:     &anonymizeClient,
+			Level:                  "info",
+			AccessLog:              &accessLog,
+			RequestBodyMethods:     []string{"POST"},
+			RequestBodyLogMaxBytes: DefaultRequestBodyLogMaxBytes,
+			AnonymizeClient:        &anonymizeClient,
 		},
 		JSONP:    JSONPConfig{Param: "callback"},
 		StateDir: "",
@@ -672,10 +690,13 @@ func applyEnv(cfg *Config) error {
 	if err := applyBoolEnv("SINKHOLE_LOG_QUERY", func(value bool) { cfg.Logging.LogQuery = value }); err != nil {
 		return err
 	}
-	if err := applyBoolEnv("SINKHOLE_LOG_POST_BODY", func(value bool) { cfg.Logging.LogPostBody = value }); err != nil {
+	if err := applyBoolEnv("SINKHOLE_LOG_REQUEST_BODY", func(value bool) { cfg.Logging.LogRequestBody = value }); err != nil {
 		return err
 	}
-	if err := applyInt64Env("SINKHOLE_POST_BODY_LOG_MAX_BYTES", func(value int64) { cfg.Logging.PostBodyLogMaxBytes = value }); err != nil {
+	if value, ok := os.LookupEnv("SINKHOLE_REQUEST_BODY_METHODS"); ok {
+		cfg.Logging.RequestBodyMethods = commaSeparated(value)
+	}
+	if err := applyInt64Env("SINKHOLE_REQUEST_BODY_LOG_MAX_BYTES", func(value int64) { cfg.Logging.RequestBodyLogMaxBytes = value }); err != nil {
 		return err
 	}
 	if err := applyBoolEnv("SINKHOLE_ANONYMIZE_CLIENT", func(value bool) { cfg.Logging.AnonymizeClient = &value }); err != nil {

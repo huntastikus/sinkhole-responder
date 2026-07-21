@@ -191,18 +191,30 @@ test.describe.serial("admin GUI", () => {
     await expect(recommended).toBeChecked();
   });
 
-  test("POST body logging is opt-in and displays its sensitive-data warning", async () => {
+  test("request body logging is opt-in with selectable methods and a sensitive-data warning", async () => {
     await page.goto(`${adminBaseURL}/config`);
 
     await expect(page.getByText("Sensitive-data risk", { exact: true })).toBeVisible();
     await expect(page.getByText(/Redaction is best-effort/)).toBeVisible();
 
-    const enabled = page.getByLabel("Log POST bodies");
-    const limit = page.getByLabel("POST body log bytes");
+    const enabled = page.getByLabel("Log request bodies");
+    const limit = page.getByLabel("Request body log bytes");
     await expect(enabled).not.toBeChecked();
     await expect(limit).toHaveValue("4096");
+    const postMethod = page.getByLabel("POST", { exact: true });
+    await expect(postMethod).toBeChecked();
+    await expect(page.getByLabel("PUT", { exact: true })).not.toBeChecked();
+    await expect(page.getByLabel("PATCH", { exact: true })).not.toBeChecked();
+    await expect(page.getByLabel("DELETE", { exact: true })).not.toBeChecked();
 
     await enabled.check();
+    await postMethod.uncheck();
+    await page.getByRole("button", { name: "Save configuration" }).click();
+    await expect(page.locator("#logging-request-body-methods-error")).toHaveText(/Select at least one method/);
+    await postMethod.check();
+    await page.getByLabel("PUT", { exact: true }).check();
+    await page.getByLabel("PATCH", { exact: true }).check();
+    await page.getByLabel("DELETE", { exact: true }).check();
     await limit.fill("2048");
     const saveResponse = page.waitForResponse(
       (response) => response.url() === `${adminBaseURL}/api/config` && response.request().method() === "PUT",
@@ -213,6 +225,9 @@ test.describe.serial("admin GUI", () => {
     await page.reload();
     await expect(enabled).toBeChecked();
     await expect(limit).toHaveValue("2048");
+    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+      await expect(page.getByLabel(method, { exact: true })).toBeChecked();
+    }
   });
 
   test("certificate manager generates a CA with fingerprint and download link", async () => {
