@@ -70,7 +70,6 @@ jobs:
           images: ${{ env.IMAGE }}
           tags: |
             type=raw,value=${{ steps.version.outputs.value }}-rc
-            type=sha,format=long
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
@@ -152,3 +151,35 @@ jobs:
           build-args: VERSION=${{ steps.version.outputs.value }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Add Docker pull commands to GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          notes_file="$(mktemp)"
+          updated_file="$(mktemp)"
+          trap 'rm -f "$notes_file" "$updated_file"' EXIT
+
+          gh release view "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json body \
+            --jq '.body // ""' > "$notes_file"
+
+          if grep -Fq '<!-- docker-pull-commands -->' "$notes_file"; then
+            exit 0
+          fi
+
+          {
+            cat "$notes_file"
+            printf '\n\n<!-- docker-pull-commands -->\n## Docker\n\n```sh\n'
+            printf 'docker pull %s:%s\n' "$IMAGE" "$RELEASE_VERSION"
+            printf 'docker pull %s:latest\n' "$IMAGE"
+            printf '```\n'
+          } > "$updated_file"
+
+          gh release edit "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --notes-file "$updated_file"
