@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detector config check · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+  <script type="module" src="/assets/detector.js"></script>
+  <script type="module" src="/assets/nav.js"></script>
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell">
+    <header class="settings-header">
+      <div>
+        <p class="eyebrow">Tools</p>
+        <h1>Detector config check</h1>
+        <p class="settings-intro">
+          This checks your RULE CONFIG. To verify the full live path (DNS block + certificate trust)
+          from a browsing device, open the standalone live detector
+          (<code>web/detector.html?base=https://responder-address</code>) pointed at this responder.
+        </p>
+      </div>
+    </header>
+
+    <section class="config-card" aria-labelledby="config-results-title">
+      <h2 id="config-results-title">Stub rule coverage</h2>
+      <p class="section-help">
+        Each check previews the effective user rules and enabled rulepacks. It does not load any
+        third-party scripts into the authenticated admin origin.
+        <a class="text-link" href="/rulepacks">Manage rulepacks →</a>
+      </p>
+      <div class="table-scroll">
+        <table class="data-table data-table-wide">
+          <caption class="section-help">Current effective configuration by supported network</caption>
+          <thead>
+            <tr>
+              <th scope="col">Network</th>
+              <th scope="col">Preview request</th>
+              <th scope="col">Matched rule</th>
+              <th scope="col">Response</th>
+              <th scope="col">Result</th>
+            </tr>
+          </thead>
+          <tbody id="detector-results" aria-live="polite"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

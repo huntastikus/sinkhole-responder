@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Logs · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+  <script type="module" src="/assets/logs.js"></script>
+  <script type="module" src="/assets/nav.js"></script>
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell logs-shell">
+    <header class="settings-header">
+      <div>
+        <p class="eyebrow">Sinkhole Responder</p>
+        <h1>Live logs</h1>
+        <p class="settings-intro">Recent in-memory records, newest first. Query values are redacted before records enter this view.</p>
+      </div>
+    </header>
+
+    <aside id="logs-banner" class="banner config-banner" role="alert" hidden></aside>
+
+    <section class="config-card" aria-labelledby="logs-table-title">
+      <div class="logs-toolbar">
+        <div>
+          <h2 id="logs-table-title">Recent records</h2>
+          <p id="logs-status" class="section-help" role="status" aria-live="polite">Loading…</p>
+        </div>
+        <div class="logs-controls" aria-label="Log filters">
+          <div class="field logs-control">
+            <label for="logs-level">Minimum level</label>
+            <select id="logs-level" name="level">
+              <option value="debug">Debug</option>
+              <option value="info" selected>Info</option>
+              <option value="warn">Warn</option>
+              <option value="error">Error</option>
+            </select>
+          </div>
+          <div class="field logs-control">
+            <label for="logs-limit">Limit</label>
+            <input id="logs-limit" name="limit" type="number" min="1" max="1000" value="200" inputmode="numeric">
+          </div>
+          <label class="field-toggle logs-auto-refresh" for="logs-auto-refresh">
+            <input id="logs-auto-refresh" type="checkbox" role="switch" checked>
+            <span>Auto-refresh</span>
+            <span class="field-help">Every 3 seconds</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="table-scroll logs-table-scroll">
+        <table class="data-table data-table-logs">
+          <thead>
+            <tr>
+              <th scope="col">Time</th>
+              <th scope="col">Level</th>
+              <th scope="col">Message</th>
+              <th scope="col">Attributes</th>
+            </tr>
+          </thead>
+          <tbody id="logs-body" aria-live="polite"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,8 @@
+title: Amazon TAM
+description: Neutralizes the Amazon Publisher Services apstag loader.
+rules:
+  - name: amazon-tam-apstag
+    host: c.amazon-adsystem.com
+    path_glob: "**/apstag.js"
+    response:
+      embedded: stub-apstag

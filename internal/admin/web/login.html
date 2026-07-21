@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body class="auth-body">
+  <main class="auth-shell">
+    <section class="auth-card" aria-labelledby="auth-heading">
+      <div class="auth-lockup">
+        <span class="auth-mark" aria-hidden="true">
+          <span class="auth-ring"></span>
+          <span class="auth-ring"></span>
+          <span class="auth-ring"></span>
+          <span class="auth-core"></span>
+        </span>
+        <span class="auth-wordmark">Sinkhole Responder</span>
+      </div>
+      <h1 id="auth-heading" class="auth-heading">Sign in</h1>
+      <p class="auth-lede">Enter your admin password to manage blocked-domain responses.</p>
+      {{if .Error}}<p id="auth-error" class="auth-error" role="alert">{{.Error}}</p>{{end}}
+      <form class="auth-form" method="post" action="/login">
+        <label class="auth-label" for="password">Admin password</label>
+        <input class="auth-input" id="password" name="password" type="password" required autocomplete="current-password"{{if .Error}} aria-invalid="true" aria-describedby="auth-error"{{else}} autofocus{{end}}>
+        <button class="button button-primary auth-submit" type="submit">Sign in</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TLS and trusting the CA · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell help-shell">
+    <a class="text-link back-link" href="/help/">← Back to help center</a>
+    <article class="config-card guide-card">
+      <p class="eyebrow">Sinkholed HTTPS</p>
+      <h1>TLS and trusting the CA</h1>
+      <p>DNS redirection does not remove HTTPS certificate checks. A browser still asks for a certificate valid for the original hostname.</p>
+
+      <h2>The three TLS modes</h2>
+      <ul class="guide-steps">
+        <li><strong>Disabled</strong> is the safe default. The responder does not listen for HTTPS traffic.</li>
+        <li><strong>Static certificates</strong> use certificate and key pairs you provide for hostnames you legitimately control.</li>
+        <li><strong>Local CA</strong> creates a short-lived certificate for each requested hostname. Every client must deliberately trust the CA first.</li>
+      </ul>
+
+      <div class="danger-callout" role="note">
+        <strong>Lab/home only</strong>
+        <p>A trusted CA can impersonate <em>any HTTPS site</em> to that client. Use local-CA mode only on devices you control in a lab/home network. Never distribute the CA or install it broadly, and protect its private key.</p>
+      </div>
+
+      <p>Use the <a class="text-link" href="/tls">TLS certificate manager</a> to inspect the current mode, generate and download a local CA, upload static certificates, or switch modes. The responder never installs trust for you.</p>
+
+      <h2>Trust the local CA on a client</h2>
+      <ul class="guide-links">
+        <li><a href="/help/trust-windows"><span>Windows</span><span aria-hidden="true">→</span></a></li>
+        <li><a href="/help/trust-macos"><span>macOS</span><span aria-hidden="true">→</span></a></li>
+        <li><a href="/help/trust-ios"><span>iOS / iPadOS</span><span aria-hidden="true">→</span></a></li>
+        <li><a href="/help/trust-android"><span>Android</span><span aria-hidden="true">→</span></a></li>
+        <li><a href="/help/trust-debian"><span>Debian / Ubuntu</span><span aria-hidden="true">→</span></a></li>
+        <li><a href="/help/trust-firefox"><span>Firefox</span><span aria-hidden="true">→</span></a></li>
+        <li><a href="/help/trust-chrome"><span>Chrome / Chromium</span><span aria-hidden="true">→</span></a></li>
+      </ul>
+
+      <p class="private-key-note">Trust fixes only the certificate chain. Pinning, Subresource Integrity, application-specific validation, and QUIC/HTTP-3-only clients may still fail. See <a class="text-link" href="/help/adblock-limits">honest limits</a>.</p>
+    </article>
+  </main>
+  <script type="module" src="/assets/nav.js"></script>
+</body>
+</html>

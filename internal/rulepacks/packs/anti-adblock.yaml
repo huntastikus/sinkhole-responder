@@ -1,0 +1,15 @@
+title: Anti-Adblock Detectors
+description: Neutralizes common broadly hosted anti-adblock detection scripts.
+rules:
+  # Best-effort and intentionally broad because these scripts are often first-party.
+  - name: anti-adblock-fuckadblock
+    host_glob: "*"
+    path_glob: "**/fuckadblock*.js"
+    response:
+      embedded: stub-antiadblock
+  # Best-effort and intentionally broad because these scripts are often first-party.
+  - name: anti-adblock-blockadblock
+    host_glob: "*"
+    path_glob: "**/blockadblock*.js"
+    response:
+      embedded: stub-antiadblock

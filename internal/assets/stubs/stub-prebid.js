@@ -1,0 +1,14 @@
+window.__sinkholeStubs = window.__sinkholeStubs || {};
+window.__sinkholeStubs["prebid"] = true;
+window.pbjs = window.pbjs || {};
+window.pbjs.que = window.pbjs.que || [];
+window.pbjs.que.push = function (fn) { try { if (typeof fn === "function") fn(); } catch (e) {} };
+window.pbjs.requestBids = function (o) { if (o && typeof o.bidsBackHandler === "function") o.bidsBackHandler({}); };
+window.pbjs.setConfig = function () {};
+window.pbjs.addAdUnits = function () {};
+window.pbjs.removeAdUnit = function () {};
+window.pbjs.setTargetingForGPTAsync = function () {};
+window.pbjs.getHighestCpmBids = function () { return []; };
+window.pbjs.enableAnalytics = function () {};
+window.pbjs.onEvent = function () {};
+window.pbjs.libLoaded = true;

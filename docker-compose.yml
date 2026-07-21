@@ -1,0 +1,56 @@
+services:
+  sinkhole-responder:
+    image: sinkhole-responder:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION:-docker}
+    ports:
+      - "80:80"       # data plane, HTTP
+      - "443:443"     # data plane, HTTPS (local-CA)
+      - "8080:8080"   # admin GUI, HTTP (redirects to HTTPS by default)
+      - "8443:8443"   # admin GUI, HTTPS
+      # Management is intentionally not published. To monitor from the host,
+      # set management.listen to "0.0.0.0:9090" and allow_external to true in
+      # /data/config.yaml, then add "127.0.0.1:9090:9090" here. The host-side bind
+      # remains loopback-only even though the container-side bind must be broad.
+    command: ["--config", "/data/config.yaml"]
+    # The first-run seed enables the admin plane. For an existing config, ensure
+    # /data/config.yaml has admin.enabled: true before starting this appliance.
+    read_only: true
+    cap_drop:
+      - ALL
+    # Ports 80/443 need NET_BIND_SERVICE because the process remains non-root.
+    cap_add:
+      - NET_BIND_SERVICE
+    # This static binary never needs to gain privileges after exec.
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    # Numeric ownership works in scratch, which intentionally has no passwd file.
+    user: "65532:65532"
+    volumes:
+      # Both the live config and GUI-managed state are co-located here.
+      # On Linux, create ./data writable by numeric UID 65532 before first start.
+      - ./data:/data
+    # unless-stopped keeps the appliance up across daemon/host restarts AND makes
+    # the admin GUI's "Restart now" button work: that button applies startup-only
+    # settings (listeners, TLS, timeouts, limits) by exiting the process cleanly,
+    # and this policy relaunches it. An explicit `docker compose stop`/`down` is
+    # still honored and not auto-restarted.
+    restart: unless-stopped
+
+    # The scratch image has no shell or curl, and the binary has no healthcheck
+    # subcommand, so a container healthcheck would be fake. Check /healthz from
+    # host monitoring only after explicitly publishing management as described
+    # above (for example: curl http://127.0.0.1:9090/healthz).
+
+    # This service makes NO outbound connections (static scratch image, no CA bundle),
+    # so there is little egress to isolate at the Docker layer.
+    # NOTE: attaching the container to an `internal: true` Docker network ALSO disables
+    # host port publishing (`ports:` mappings stop working), which would make the responder
+    # unreachable — so it cannot be combined with the published-port ingress this service
+    # needs. Restrict who may REACH the responder at the host firewall instead
+    # (nftables/ufw, LAN-only — see README security section).

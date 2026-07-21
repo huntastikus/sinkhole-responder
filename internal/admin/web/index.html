@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="dashboard">
+    <header class="dashboard-header">
+      <div>
+        <p class="eyebrow">Local traffic overview</p>
+        <div class="title-row">
+          <h1>Sinkhole Responder</h1>
+          <span class="live-indicator"><span class="live-dot" aria-hidden="true"></span>Live</span>
+        </div>
+      </div>
+      <p id="banner" class="banner" role="alert" hidden></p>
+    </header>
+
+    <section class="metric-grid" aria-label="Key metrics">
+      <article class="metric-card">
+        <p class="metric-label">Requests</p>
+        <p class="metric-value" data-metric="requests_total">—</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">Requests/sec</p>
+        <p class="metric-value" data-metric="rps">—</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">Rules loaded</p>
+        <p class="metric-value" data-metric="rules_loaded">—</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">Leaf-cache entries</p>
+        <p class="metric-value" data-metric="leaf_cache_size">—</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">Uptime</p>
+        <p class="metric-value metric-value-compact" data-metric="uptime">—</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">Version</p>
+        <p class="metric-value metric-value-compact" data-metric="version">—</p>
+      </article>
+    </section>
+
+    <section class="charts-grid" aria-label="Traffic charts">
+      <article class="chart-card">
+        <header class="chart-header">
+          <div>
+            <p class="chart-kicker">Right now</p>
+            <h2>Request rate</h2>
+          </div>
+          <p class="chart-note">vs observed peak</p>
+        </header>
+        <div id="gauge" class="chart chart-gauge" role="img" aria-label="Request rate gauge loading"></div>
+      </article>
+
+      <article class="chart-card">
+        <header class="chart-header">
+          <div>
+            <p class="chart-kicker">Last 5 minutes</p>
+            <h2>Requests per second</h2>
+          </div>
+          <p class="chart-note">Live rate</p>
+        </header>
+        <div id="sparkline" class="chart" role="img" aria-label="Requests per second history loading"></div>
+      </article>
+
+      <article class="chart-card">
+        <header class="chart-header">
+          <div>
+            <p class="chart-kicker">Response health</p>
+            <h2>Status classes</h2>
+          </div>
+          <p class="chart-note">Newest 40 samples</p>
+        </header>
+        <div id="status-stack" class="chart" role="img" aria-label="Response status history loading"></div>
+        <ul class="status-legend" aria-label="Status class legend">
+          <li><span class="legend-swatch status-2xx" aria-hidden="true"></span>2xx</li>
+          <li><span class="legend-swatch status-3xx" aria-hidden="true"></span>3xx</li>
+          <li><span class="legend-swatch status-4xx" aria-hidden="true"></span>4xx</li>
+          <li><span class="legend-swatch status-5xx" aria-hidden="true"></span>5xx</li>
+        </ul>
+      </article>
+
+      <article class="chart-card">
+        <header class="chart-header">
+          <div>
+            <p class="chart-kicker">Response time</p>
+            <h2>Latency distribution</h2>
+          </div>
+          <dl class="percentiles">
+            <div><dt>p50</dt><dd id="latency-p50">—</dd></div>
+            <div><dt>p95</dt><dd id="latency-p95">—</dd></div>
+          </dl>
+        </header>
+        <div id="latency" class="chart" role="img" aria-label="Latency histogram loading"></div>
+      </article>
+    </section>
+
+    <p id="sr-summary" class="sr-only" aria-live="polite"></p>
+  </main>
+  <script type="module" src="/assets/dashboard.js"></script>
+  <script type="module" src="/assets/nav.js"></script>
+</body>
+</html>

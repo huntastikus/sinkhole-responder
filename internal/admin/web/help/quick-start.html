@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quick start · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell help-shell">
+    <a class="text-link back-link" href="/help/">← Back to help center</a>
+    <article class="config-card guide-card">
+      <p class="eyebrow">From zero to blocking</p>
+      <h1>Quick start</h1>
+      <p>The guided setup is the fastest route. You will choose a responder address, turn on the safe default protection, and get the exact DNS settings to copy.</p>
+
+      <h2>Set it up</h2>
+      <ol class="guide-steps">
+        <li><strong>Enable the admin GUI.</strong> Set <code>admin.enabled: true</code>. The supplied container configuration already enables it on first start.</li>
+        <li><strong>Create the admin password.</strong> Open <code>http://RESPONDER_IP:8080</code>. A new installation sends you to the password setup page.</li>
+        <li><strong>Run the <a class="text-link" href="/wizard">setup wizard</a>.</strong> Choose a stable LAN address that your AdGuard Home clients can reach. Start with HTTP unless you deliberately need sinkholed HTTPS.</li>
+        <li><strong>Enable recommended protection.</strong> The wizard can turn on the curated <code>recommended</code> rulepack for you.</li>
+        <li><strong>Point AdGuard Home here.</strong> Copy the Custom IP values shown by the wizard into AdGuard Home. See the <a class="text-link" href="/help/adguard-home">AdGuard Home setup guide</a> for the exact fields.</li>
+        <li><strong>Verify.</strong> Load a blocked resource, then check that the dashboard request counter increases. The <a class="text-link" href="/tools">Tools page</a> can preview which response a host and path would receive.</li>
+      </ol>
+
+      <p class="private-key-note"><strong>HTTPS is a separate choice:</strong> sinkholed HTTPS works only with a suitable certificate. Local-CA mode requires deliberate trust on every client. Read <a class="text-link" href="/help/tls-trust">TLS and trusting the CA</a> before enabling it.</p>
+    </article>
+  </main>
+  <script type="module" src="/assets/nav.js"></script>
+</body>
+</html>

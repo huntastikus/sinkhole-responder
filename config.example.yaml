@@ -1,0 +1,114 @@
+# Sinkhole Responder example configuration.
+# See README.md for deployment, AdGuard Home, TLS, rule, and security guidance.
+# Supported SINKHOLE_* environment variables are noted beside the settings they
+# override; the complete list is also in the README configuration reference.
+
+# HTTP listen addresses. Default: ["0.0.0.0:80"]. Env: SINKHOLE_LISTEN_HTTP (comma-separated).
+listen:
+  http: ["0.0.0.0:80"]
+  # HTTPS listen addresses. Default: ["0.0.0.0:443"]. Env: SINKHOLE_LISTEN_HTTPS (comma-separated).
+  https: ["0.0.0.0:443"]
+
+# Writable state directory. Default: "" (the directory containing this config file).
+state_dir: ""
+
+# Admin UI; recommended for the v2 GUI appliance. Set false for headless operation. Default: false.
+admin:
+  enabled: true
+  # HTTP admin listen address. Default: "0.0.0.0:8080".
+  listen: "0.0.0.0:8080"
+  tls:
+    # Also serve the admin UI over HTTPS. Default: true.
+    enabled: true
+    # HTTPS admin listen address. Default: "0.0.0.0:8443".
+    listen: "0.0.0.0:8443"
+    # Optional certificate path; a local-CA-signed certificate is minted on demand when empty. Default: "".
+    cert_file: ""
+    # Optional private-key path. Default: "".
+    key_file: ""
+    # Redirect the HTTP admin listener to HTTPS when TLS is enabled. Default: true.
+    redirect_http: true
+  # Authenticated admin session lifetime. Default: "12h".
+  session_ttl: "12h"
+  # Per-client login attempt rate. Default: 0.2 (about one attempt every five seconds).
+  login_rate_per_ip: 0.2
+  # Login rate-limit burst. Default: 5.
+  login_burst: 5
+
+# Optional embedded rulepacks appended after user rules. Default: [].
+rulepacks:
+  enabled: []
+  # Enable the curated adblock-network stubs (recommended for most users):
+  # enabled: ["recommended"]
+  # Other available packs: adsense, amazon-tam, analytics, anti-adblock, cmp, facebook, gpt, prebid.
+
+# Enable the management listener. Default: true.
+management:
+  enabled: true
+  # Management listen address. Default: "127.0.0.1:9090". Env: SINKHOLE_MANAGEMENT_LISTEN.
+  listen: "127.0.0.1:9090"
+  # Permit management binding outside loopback. Default: false.
+  allow_external: false
+
+# TLS mode: disabled, static, or local-ca. Default: "local-ca". Env: SINKHOLE_TLS_MODE.
+tls:
+  mode: "local-ca"
+  # Static certificate pairs. Default: [].
+  static:
+    certs: []
+    # Each entry has hosts: [], cert_file: "", and key_file: ""; no entries exist by default.
+  # Local CA certificate path. Default: "".
+  local_ca:
+    ca_cert: ""
+    # Local CA private-key path. Default: "".
+    ca_key: ""
+    # Generated-certificate cache capacity. Default: 1024.
+    cache_size: 1024
+    # Generated leaf-certificate lifetime. Default: "24h".
+    leaf_ttl: "24h"
+
+# Default HTTP status. Default: 200. Env: SINKHOLE_DEFAULTS_STATUS.
+defaults:
+  status: 200
+  # Beacon response status. Default: 200.
+  beacon_status: 200
+  # Media response strategy: "204" or "asset". Default: "204".
+  media_response: "204"
+  # Cache-Control response value. Default: "no-store".
+  cache_control: "no-store"
+
+# Maximum request-header bytes. Default: 16384.
+limits:
+  max_header_bytes: 16384
+  # Maximum request-body bytes. Default: 65536.
+  max_body_bytes: 65536
+  # Request read timeout. Default: "10s".
+  read_timeout: "10s"
+  # Response write timeout. Default: "10s".
+  write_timeout: "10s"
+  # Keep-alive idle timeout. Default: "60s".
+  idle_timeout: "60s"
+  # Per-client request rate; zero disables limiting. Default: 0.
+  rate_per_ip: 0
+  # Per-client rate-limit burst. Default: 50.
+  rate_burst: 50
+
+# Log level: debug, info, warn, or error. Default: "info". Env: SINKHOLE_LOG_LEVEL.
+logging:
+  level: "info"
+  # Enable access logs. Default: true. Env: SINKHOLE_ACCESS_LOG (true or false).
+  access_log: true
+  # Include query strings in logs; they may contain tokens. Default: false.
+  log_query: false
+  # Anonymize client addresses in logs. Default: true.
+  anonymize_client: true
+
+# Enable JSONP responses. Default: false.
+jsonp:
+  enabled: false
+  # JSONP callback query parameter. Default: "callback".
+  param: "callback"
+
+# Ordered response rules; the first matching rule wins. See README.md for every
+# match and response field, body-source restrictions, and worked examples.
+rules: []

@@ -1,0 +1,9 @@
+# Best-effort and intentionally broad: Prebid is frequently served first-party.
+title: Prebid
+description: Neutralizes broadly matched first-party and third-party Prebid scripts.
+rules:
+  - name: prebid-script
+    host_glob: "*"
+    path_glob: "**/prebid*.js"
+    response:
+      embedded: stub-prebid

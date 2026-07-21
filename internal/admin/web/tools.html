@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tools · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+  <script type="module" src="/assets/tools.js"></script>
+  <script type="module" src="/assets/nav.js"></script>
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell">
+    <header class="settings-header">
+      <div>
+        <p class="eyebrow">Sinkhole Responder</p>
+        <h1>Tools</h1>
+        <p class="settings-intro">Test the live placeholder decision chain and generate copy-ready AdGuard Home settings.</p>
+      </div>
+    </header>
+
+    <div class="config-form">
+      <section class="config-card" aria-labelledby="domain-tester-title">
+        <h2 id="domain-tester-title">Domain tester</h2>
+        <p class="section-help">This is a dry run with the live user rules, enabled rule packs, and default response. It never makes a network request. This responder answers every request with a placeholder.</p>
+        <form id="domain-test-form" class="preview-form">
+          <div class="field-grid">
+            <div class="field">
+              <label for="test-domain">Domain</label>
+              <input id="test-domain" name="domain" type="text" value="pagead2.googlesyndication.com" autocomplete="off" required>
+            </div>
+            <div class="field">
+              <label for="test-path">Path</label>
+              <input id="test-path" name="path" type="text" value="/pagead/js/adsbygoogle.js" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="test-method">Method</label>
+              <select id="test-method" name="method">
+                <option>GET</option>
+                <option>POST</option>
+                <option>HEAD</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button id="run-domain-test" class="button button-primary" type="submit">Test</button>
+            <p id="domain-test-error" class="form-error" role="alert" aria-live="polite"></p>
+          </div>
+        </form>
+
+        <div id="domain-test-result" class="preview-result" aria-live="polite" hidden>
+          <p id="domain-test-verdict" class="section-help"></p>
+          <dl class="preview-facts">
+            <div><dt>Matched rule</dt><dd id="domain-test-rule"></dd></div>
+            <div><dt>Kind</dt><dd id="domain-test-kind"></dd></div>
+            <div><dt>Status</dt><dd id="domain-test-status"></dd></div>
+            <div><dt>Content type</dt><dd id="domain-test-content-type"></dd></div>
+          </dl>
+          <p class="preview-body-label">Body preview <span id="domain-test-truncated"></span></p>
+          <pre id="domain-test-body"></pre>
+        </div>
+      </section>
+
+      <section class="config-card" aria-labelledby="agh-config-title">
+        <h2 id="agh-config-title">AdGuard Home config</h2>
+        <p class="section-help">Generate the Custom-IP blocking settings that resolve blocked domains to this responder.</p>
+        <form id="agh-config-form" class="preview-form">
+          <div class="field">
+            <label for="responder-ip">Responder IP</label>
+            <input id="responder-ip" name="ip" type="text" inputmode="text" autocomplete="off" required aria-describedby="agh-config-error">
+          </div>
+          <div class="form-actions">
+            <button id="generate-agh-config" class="button button-primary" type="submit">Generate</button>
+            <p id="agh-config-error" class="form-error" role="alert" aria-live="polite"></p>
+          </div>
+        </form>
+
+        <div id="agh-config-result" class="preview-result" aria-live="polite" hidden>
+          <h3>AdGuard Home steps</h3>
+          <ol id="agh-config-steps"></ol>
+          <p class="preview-body-label">AdGuardHome.yaml</p>
+          <pre id="agh-config-yaml"></pre>
+          <div class="form-actions">
+            <button id="copy-agh-config" class="button button-secondary" type="button">Copy</button>
+            <p id="copy-agh-status" class="form-error" role="status" aria-live="polite"></p>
+          </div>
+          <p id="agh-config-warning" class="raw-warning"></p>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

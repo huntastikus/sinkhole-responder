@@ -1,0 +1,9 @@
+window.__sinkholeStubs = window.__sinkholeStubs || {};
+window.__sinkholeStubs["fbpixel"] = true;
+window.fbq = function () {};
+window.fbq.queue = [];
+window.fbq.loaded = true;
+window.fbq.version = "2.0";
+window.fbq.push = window.fbq;
+window.fbq.callMethod = null;
+window._fbq = window.fbq;

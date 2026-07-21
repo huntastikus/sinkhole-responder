@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Troubleshooting · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell help-shell">
+    <a class="text-link back-link" href="/help/">← Back to help center</a>
+    <article class="config-card guide-card">
+      <p class="eyebrow">Find the broken link in the path</p>
+      <h1>Troubleshooting</h1>
+
+      <h2>Is traffic even reaching this box?</h2>
+      <ol class="guide-steps">
+        <li>Watch the dashboard request counter while loading the blocked resource. If it does not increase, the live request probably did not reach the responder.</li>
+        <li>Use <a class="text-link" href="/tools">Tools → Test a domain</a> to confirm which saved rule, rulepack, or default response would win. This is a dry run; it does not prove that client traffic used this DNS path.</li>
+        <li>Bypass DNS and test the responder directly: <code class="command-block">curl -v --resolve blocked.example:80:RESPONDER_IP http://blocked.example/banner.js</code></li>
+        <li>Check the system-health banner for listener, TLS, state-directory, recent-error, or rulepack warnings.</li>
+      </ol>
+
+      <h2>DNS is not redirecting the blocked name</h2>
+      <p>Run <code>dig blocked.example @ADGUARD_IP</code> and confirm the answer is the responder's LAN address. Then check AdGuard Home's Custom IP fields, browser Secure DNS / DNS-over-HTTPS, operating-system DNS, and VPN DNS. Follow the <a class="text-link" href="/help/adguard-home">AdGuard Home setup guide</a>.</p>
+
+      <h2>The browser shows a certificate error</h2>
+      <p>For local-CA mode, download the public CA and deliberately trust it on that client. For static mode, make sure the certificate covers the original hostname. Do not make <code>curl -k</code> or disabled browser verification the normal fix. Follow <a class="text-link" href="/help/tls-trust">TLS and trusting the CA</a>.</p>
+
+      <h2>An empty ad box is left over</h2>
+      <p>This is expected. The responder returns a harmless placeholder for a redirected resource; it does not edit the page, remove first-party layout, or hide same-domain ad slots. Read <a class="text-link" href="/help/adblock-limits">Adblock-defeat and honest limits</a> for the boundary.</p>
+    </article>
+  </main>
+  <script type="module" src="/assets/nav.js"></script>
+</body>
+</html>

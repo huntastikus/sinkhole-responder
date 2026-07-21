@@ -1,0 +1,13 @@
+title: Google AdSense
+description: Neutralizes Google AdSense display-ad scripts with a no-op stub.
+rules:
+  - name: adsense-adsbygoogle
+    host: pagead2.googlesyndication.com
+    path_glob: "**/adsbygoogle.js"
+    response:
+      embedded: stub-adsense
+  - name: adsense-show-ads
+    host: pagead2.googlesyndication.com
+    path_glob: "**/show_ads*.js"
+    response:
+      embedded: stub-adsense

@@ -1,0 +1,13 @@
+listen:
+  http: ["127.0.0.1:8080"]
+  https: []
+tls:
+  mode: disabled
+management:
+  enabled: true
+  listen: "127.0.0.1:9090"
+defaults:
+  status: 200
+jsonp:
+  enabled: false
+rules: []

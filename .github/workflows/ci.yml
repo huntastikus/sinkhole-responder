@@ -1,0 +1,210 @@
+name: CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Check formatting
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            printf 'Unformatted files:\n%s\n' "$unformatted"
+          fi
+          test -z "$unformatted"
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test with race detector
+        run: go test ./... -race
+
+      - name: Fuzz host normalization and matching
+        run: go test ./internal/rules/ -run '^$' -fuzz FuzzHostNormalizeAndMatch -fuzztime 20s
+
+      - name: Fuzz rule compilation
+        run: go test ./internal/rules/ -run '^$' -fuzz FuzzRuleCompile -fuzztime 20s
+
+      - name: Fuzz response selection
+        run: go test ./internal/respond/ -run '^$' -fuzz FuzzSelect -fuzztime 20s
+
+      - name: Fuzz Host header handling
+        run: go test ./internal/httpserver/ -run '^$' -fuzz FuzzHostHeader -fuzztime 20s
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          version="${GITHUB_SHA:-}"
+          version="${version:0:7}"
+          if [ -z "$version" ]; then
+            version=ci
+          fi
+          mkdir -p dist
+          CGO_ENABLED=0 go build -trimpath \
+            -ldflags "-s -w -X main.version=$version" \
+            -o "dist/sinkhole-responder-${GOOS}-${GOARCH}" \
+            ./cmd/sinkhole-responder
+
+      - name: Upload ${{ matrix.goos }}/${{ matrix.goarch }} binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: sinkhole-responder-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/sinkhole-responder-${{ matrix.goos }}-${{ matrix.goarch }}
+
+  admin-js:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check admin JavaScript syntax
+        shell: bash
+        run: |
+          shopt -s globstar nullglob
+          files=(internal/admin/**/*.mjs internal/admin/web/*.js)
+          for file in "${files[@]}"; do
+            node --check "$file"
+          done
+
+      - name: Run admin Node tests
+        shell: bash
+        run: |
+          shopt -s globstar nullglob
+          tests=(internal/admin/**/*.mjs)
+          if (( ${#tests[@]} )); then
+            node --test "${tests[@]}"
+          fi
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: |
+          version="${GITHUB_SHA:-}"
+          version="${version:0:7}"
+          if [ -z "$version" ]; then
+            version=ci
+          fi
+          docker build --build-arg "VERSION=$version" -t sinkhole-responder:ci .
+
+      - name: Smoke test image
+        run: |
+          container_id="$(docker run -d --read-only --cap-drop ALL \
+            --cap-add NET_BIND_SERVICE --security-opt no-new-privileges:true \
+            --tmpfs /tmp -p 18080:80 -p 18081:8080 sinkhole-responder:ci)"
+          trap 'docker stop "$container_id"' EXIT
+          sleep 2
+          for attempt in 1 2 3 4 5; do
+            if data_status="$(curl -fsS -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/ad.js)" && \
+              admin_status="$(curl -fsS -o /dev/null -w '%{http_code}' http://127.0.0.1:18081/setup)" && \
+              [ "$data_status" = 200 ] && [ "$admin_status" = 200 ]; then
+              exit 0
+            fi
+            echo "Smoke test attempt $attempt did not return HTTP 200 from both data and admin planes"
+            sleep 1
+          done
+          docker logs "$container_id"
+          exit 1
+
+  playwright:
+    needs: [test, admin-js]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check for Playwright suite
+        id: gate
+        run: |
+          if [ -f playwright/package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report skipped Playwright suite
+        if: steps.gate.outputs.present == 'false'
+        run: echo "playwright suite not present yet; skipping"
+
+      - name: Set up Node.js
+        if: steps.gate.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: playwright/package-lock.json
+
+      - name: Set up Go
+        if: steps.gate.outputs.present == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: Build responder
+        if: steps.gate.outputs.present == 'true'
+        run: |
+          mkdir -p bin
+          CGO_ENABLED=0 go build -trimpath -o ./bin/sinkhole-responder ./cmd/sinkhole-responder
+
+      - name: Install Playwright and browser dependencies
+        if: steps.gate.outputs.present == 'true'
+        working-directory: playwright
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        if: steps.gate.outputs.present == 'true'
+        run: make test-e2e

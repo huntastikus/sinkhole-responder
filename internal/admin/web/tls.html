@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TLS certificates · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell tls-shell">
+    <header class="settings-header">
+      <div>
+        <p class="eyebrow">Admin settings</p>
+        <h1>TLS certificates</h1>
+        <p class="settings-intro">Inspect HTTPS listeners, choose a certificate mode, and prepare certificates for devices on your network.</p>
+      </div>
+    </header>
+
+    <section id="tls-banner" class="banner config-banner" role="alert" aria-live="assertive" hidden>
+      <span id="tls-banner-message" data-banner-message></span>
+      <button id="reload-tls" class="button button-secondary" type="button" hidden>Reload status</button>
+    </section>
+
+    <div class="tls-layout">
+      <section class="config-card tls-card" aria-labelledby="current-status-heading">
+        <div class="tls-card-header">
+          <div>
+            <p class="eyebrow">Live configuration</p>
+            <h2 id="current-status-heading">Current status</h2>
+          </div>
+          <span id="current-mode" class="status-chip">Loading…</span>
+        </div>
+
+        <dl class="status-list">
+          <div>
+            <dt>Mode</dt>
+            <dd id="status-mode">Loading…</dd>
+          </div>
+          <div>
+            <dt>HTTPS listeners</dt>
+            <dd id="status-listeners">Loading…</dd>
+          </div>
+        </dl>
+
+        <section id="ca-status" class="status-block" aria-labelledby="ca-status-heading" hidden>
+          <h3 id="ca-status-heading">Certificate authority</h3>
+          <dl class="status-list status-list-compact">
+            <div><dt>Fingerprint</dt><dd><code id="ca-fingerprint"></code></dd></div>
+            <div><dt>Subject</dt><dd id="ca-subject"></dd></div>
+            <div><dt>Expires</dt><dd id="ca-not-after"></dd></div>
+          </dl>
+        </section>
+
+        <section class="status-block" aria-labelledby="static-status-heading">
+          <h3 id="static-status-heading">Static certificates</h3>
+          <div class="table-scroll">
+            <table class="data-table data-table-wide">
+              <thead>
+                <tr><th scope="col">Hosts</th><th scope="col">Subject</th><th scope="col">Expires</th><th scope="col">Fingerprint</th></tr>
+              </thead>
+              <tbody id="static-certificates"></tbody>
+            </table>
+          </div>
+          <p id="no-static-certificates" class="empty-list">No static certificates configured.</p>
+        </section>
+      </section>
+
+      <section class="config-card tls-card" aria-labelledby="mode-heading">
+        <p class="eyebrow">Responder HTTPS</p>
+        <h2 id="mode-heading">Mode</h2>
+        <form id="mode-form">
+          <div class="field">
+            <label for="tls-mode">Certificate mode</label>
+            <select id="tls-mode" name="mode">
+              <option value="disabled">Disabled</option>
+              <option value="static">Static certificates</option>
+              <option value="local-ca">Local CA</option>
+            </select>
+            <div class="mode-explanations" aria-live="polite">
+              <p><strong>Disabled:</strong> stop serving responder HTTPS.</p>
+              <p><strong>Static:</strong> serve uploaded certificates for their assigned hosts.</p>
+              <p><strong>Local CA:</strong> generate certificates for requested HTTPS hostnames.</p>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button id="apply-mode" class="button button-primary" type="submit">Apply mode</button>
+            <p id="mode-error" class="form-error" role="alert" aria-live="assertive"></p>
+          </div>
+        </form>
+      </section>
+
+      <section class="config-card tls-card" aria-labelledby="generate-heading">
+        <p class="eyebrow">Local CA</p>
+        <h2 id="generate-heading">Generate CA</h2>
+        <div class="danger-callout" role="note">
+          <strong>High-trust certificate authority</strong>
+          <p>This CA can impersonate ANY HTTPS site to clients that trust it. Use only in an isolated lab/home environment; never distribute it or install it system-wide.</p>
+        </div>
+        <form id="generate-form">
+          <div class="field-grid">
+            <div class="field">
+              <label for="ca-common-name">Common name</label>
+              <input id="ca-common-name" name="common-name" type="text" value="Sinkhole Responder Local CA" required>
+            </div>
+            <div class="field">
+              <label for="ca-years">Validity (years)</label>
+              <input id="ca-years" name="years" type="number" min="1" max="100" step="1" value="5" required>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button id="generate-ca" class="button button-primary" type="submit">Generate CA</button>
+            <p id="generate-error" class="form-error" role="alert" aria-live="assertive"></p>
+          </div>
+        </form>
+        <section id="generated-ca-result" class="action-result" aria-labelledby="generated-result-heading" hidden>
+          <h3 id="generated-result-heading">CA generated</h3>
+          <p>SHA-256 fingerprint</p>
+          <code id="generated-fingerprint" class="fingerprint"></code>
+          <div class="result-actions">
+            <a class="button" href="/api/ca/download">Download CA certificate</a>
+            <button id="activate-local-ca" class="button button-primary" type="button">Activate (use as local-CA now)</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="config-card tls-card" aria-labelledby="upload-heading">
+        <p class="eyebrow">Static mode</p>
+        <h2 id="upload-heading">Upload cert + key</h2>
+        <p class="section-help">Upload a matching PEM certificate and private key, then assign comma-separated SNI hostnames. If hosts are blank, certificate DNS names are used.</p>
+        <p class="private-key-note"><strong>Private-key handling:</strong> the key is stored securely on the server and is never displayed or downloadable.</p>
+        <form id="upload-form" enctype="multipart/form-data">
+          <div class="field-grid">
+            <div class="field">
+              <label for="certificate-file">Certificate file</label>
+              <input id="certificate-file" name="cert" type="file" accept=".pem,.crt,.cer,application/x-pem-file" required>
+            </div>
+            <div class="field">
+              <label for="key-file">Private key file</label>
+              <input id="key-file" name="key" type="file" accept=".pem,.key,application/x-pem-file" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="certificate-hosts">Hosts</label>
+            <textarea id="certificate-hosts" name="hosts" rows="3" placeholder="ads.example.test, metrics.example.test"></textarea>
+            <small class="field-help">Comma-separated hostnames.</small>
+          </div>
+          <div class="form-actions">
+            <button id="upload-certificate" class="button button-primary" type="submit">Upload certificate</button>
+            <p id="upload-error" class="form-error" role="alert" aria-live="assertive"></p>
+          </div>
+        </form>
+        <section id="uploaded-cert-result" class="action-result" aria-labelledby="uploaded-result-heading" hidden>
+          <h3 id="uploaded-result-heading">Certificate uploaded</h3>
+          <dl class="status-list status-list-compact">
+            <div><dt>Hosts</dt><dd id="uploaded-hosts"></dd></div>
+            <div><dt>Fingerprint</dt><dd><code id="uploaded-fingerprint"></code></dd></div>
+          </dl>
+          <div class="result-actions">
+            <button id="activate-static" class="button button-primary" type="button">Activate (static)</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="config-card tls-card tls-guides" aria-labelledby="guides-heading">
+        <p class="eyebrow">Client setup</p>
+        <h2 id="guides-heading">Trust-store guides</h2>
+        <p class="section-help">Install the CA cert so browsers trust the HTTPS placeholder.</p>
+        <p class="private-key-note"><strong>Lab/home only:</strong> trust this CA only on devices you control. It lets the responder impersonate any HTTPS site to that device.</p>
+        <ul class="guide-links">
+          <li><a href="/help/trust-windows"><span>Windows</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/trust-macos"><span>macOS</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/trust-ios"><span>iOS / iPadOS</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/trust-android"><span>Android</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/trust-debian"><span>Debian / Ubuntu</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/trust-firefox"><span>Firefox</span><span aria-hidden="true">→</span></a></li>
+          <li><a href="/help/trust-chrome"><span>Chrome / Chromium</span><span aria-hidden="true">→</span></a></li>
+        </ul>
+      </section>
+    </div>
+
+    <p id="success-toast" class="toast" role="status" aria-live="polite" hidden></p>
+  </main>
+  <script type="module" src="/assets/tls.js"></script>
+  <script type="module" src="/assets/nav.js"></script>
+</body>
+</html>

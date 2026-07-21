@@ -1,0 +1,20 @@
+listen:
+  http: ["127.0.0.1:8081"]
+  https: []
+tls:
+  mode: disabled
+management:
+  enabled: true
+  listen: "127.0.0.1:9091"
+defaults:
+  status: 200
+jsonp:
+  enabled: false
+rules:
+  - name: example-ad-library
+    path_regex: "^/sdk/.+\\.js$"
+    response:
+      status: 200
+      content_type: application/javascript
+      body: |
+        globalThis.ExampleAds = { loaded: true, ready: function (cb) { if (typeof cb === "function") cb(); } };

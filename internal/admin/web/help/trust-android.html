@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trust the CA on Android · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <main class="settings-shell help-shell">
+    <a class="text-link back-link" href="/tls">← Back to TLS certificates</a>
+    <article class="config-card guide-card">
+      <p class="eyebrow">Trust-store guide</p>
+      <h1>Android</h1>
+      <p>Download it from the TLS page and transfer <code>ca.cert.pem</code> to the device.</p>
+      <div class="danger-callout" role="note"><strong>Lab/home only</strong><p>Only trust this CA on devices you control in a lab/home network. It lets this tool impersonate any HTTPS site to that device.</p></div>
+      <h2>Install the CA</h2>
+      <p>Open Settings → Security → Encryption &amp; credentials → Install a certificate → CA certificate → pick <code>ca.cert.pem</code>.</p>
+      <p class="private-key-note"><strong>Android 7+:</strong> apps do not trust user-installed CAs by default. Browsers, such as Firefox with its own trust store, do.</p>
+    </article>
+  </main>
+</body>
+</html>

@@ -1,0 +1,10 @@
+window.__sinkholeStubs = window.__sinkholeStubs || {};
+window.__sinkholeStubs["antiadblock"] = true;
+window.canRunAds = true;
+window.canShowAds = true;
+window.isAdBlockActive = false;
+window.adblockDetected = false;
+window.fuckAdBlock = { on: function () { return this; }, onDetected: function () { return this; }, onNotDetected: function (cb) { if (typeof cb === "function") cb(); return this; }, check: function () { return false; } };
+window.FuckAdBlock = function () { return window.fuckAdBlock; };
+window.blockAdBlock = window.fuckAdBlock;
+window.BlockAdBlock = window.FuckAdBlock;

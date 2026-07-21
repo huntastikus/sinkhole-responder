@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configuration · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell">
+    <header class="settings-header">
+      <div>
+        <p class="eyebrow">Admin settings</p>
+        <h1>Configuration</h1>
+        <p class="settings-intro">Edit the active responder settings. Changes are validated before the file is replaced.</p>
+      </div>
+    </header>
+
+    <section id="config-banner" class="banner config-banner" role="alert" aria-live="assertive" hidden>
+      <span id="config-banner-message" data-banner-message></span>
+      <button id="reload-config" class="button button-secondary" type="button" hidden>Reload</button>
+    </section>
+
+    <form id="config-form" class="config-form" novalidate>
+      <fieldset class="config-card">
+        <legend>Listeners</legend>
+        <p class="section-help">Addresses where responder traffic is accepted. Use host:port, such as <code>0.0.0.0:80</code>.</p>
+        <div class="listener-columns">
+          <section class="list-editor" aria-labelledby="http-listeners-heading">
+            <div class="list-editor-header">
+              <h2 id="http-listeners-heading">HTTP</h2>
+              <button class="button button-small" type="button" data-add-listener="http">Add listener</button>
+            </div>
+            <div id="listener-http-list" class="repeat-list"></div>
+          </section>
+          <section class="list-editor" aria-labelledby="https-listeners-heading">
+            <div class="list-editor-header">
+              <h2 id="https-listeners-heading">HTTPS</h2>
+              <button class="button button-small" type="button" data-add-listener="https">Add listener</button>
+            </div>
+            <div id="listener-https-list" class="repeat-list"></div>
+          </section>
+        </div>
+      </fieldset>
+
+      <fieldset class="config-card">
+        <legend>TLS</legend>
+        <div class="field-grid">
+          <div class="field">
+            <label for="tls-mode">Mode</label>
+            <select id="tls-mode" data-config-path="tls.mode">
+              <option value="disabled">Disabled</option>
+              <option value="static">Static certificates</option>
+              <option value="local-ca">Local CA</option>
+            </select>
+            <small class="field-help">Choose disabled, configured certificates, or certificates generated from a local CA.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+        </div>
+
+        <section id="tls-static-fields" class="conditional-panel" aria-labelledby="static-certs-heading" hidden>
+          <div class="list-editor-header">
+            <div>
+              <h2 id="static-certs-heading">Static certificates</h2>
+              <p class="section-help">Each pair serves one or more comma-separated hostnames.</p>
+            </div>
+            <button id="add-static-cert" class="button button-small" type="button">Add certificate</button>
+          </div>
+          <div id="static-cert-list" class="repeat-list"></div>
+          <p id="static-cert-list-error" class="field-error" aria-live="polite"></p>
+        </section>
+
+        <section id="tls-local-ca-fields" class="conditional-panel" aria-labelledby="local-ca-heading" hidden>
+          <h2 id="local-ca-heading">Local CA</h2>
+          <div class="field-grid">
+            <div class="field">
+              <label for="tls-ca-cert">CA certificate file</label>
+              <input id="tls-ca-cert" type="text" data-config-path="tls.local_ca.ca_cert">
+              <small class="field-help">Path to the PEM-encoded certificate authority certificate.</small>
+              <small class="field-error" aria-live="polite"></small>
+            </div>
+            <div class="field">
+              <label for="tls-ca-key">CA key file</label>
+              <input id="tls-ca-key" type="text" data-config-path="tls.local_ca.ca_key">
+              <small class="field-help">Path to the PEM-encoded private key for the local CA.</small>
+              <small class="field-error" aria-live="polite"></small>
+            </div>
+            <div class="field">
+              <label for="tls-cache-size">Leaf cache size</label>
+              <input id="tls-cache-size" type="number" min="1" step="1" data-config-path="tls.local_ca.cache_size" data-value-type="number">
+              <small class="field-help">Maximum number of generated leaf certificates kept in memory.</small>
+              <small class="field-error" aria-live="polite"></small>
+            </div>
+            <div class="field">
+              <label for="tls-leaf-ttl">Leaf certificate lifetime</label>
+              <input id="tls-leaf-ttl" type="text" inputmode="text" data-config-path="tls.local_ca.leaf_ttl" data-duration>
+              <small class="field-help">A Go duration such as <code>24h</code> or <code>30m</code>.</small>
+              <small class="field-error" aria-live="polite"></small>
+            </div>
+          </div>
+        </section>
+      </fieldset>
+
+      <fieldset class="config-card">
+        <legend>Defaults</legend>
+        <div class="field-grid">
+          <div class="field">
+            <label for="defaults-status">Response status</label>
+            <input id="defaults-status" type="number" min="100" max="599" step="1" data-config-path="defaults.status" data-value-type="number">
+            <small class="field-help">HTTP status returned for ordinary blocked requests.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="defaults-beacon-status">Beacon status</label>
+            <input id="defaults-beacon-status" type="number" min="100" max="599" step="1" data-config-path="defaults.beacon_status" data-value-type="number">
+            <small class="field-help">HTTP status returned for tracking beacon requests.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="defaults-media-response">Media response</label>
+            <select id="defaults-media-response" data-config-path="defaults.media_response">
+              <option value="204">Empty 204</option>
+              <option value="asset">Placeholder asset</option>
+            </select>
+            <small class="field-help">Return no content or a media-safe placeholder asset.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="defaults-cache-control">Cache-Control</label>
+            <input id="defaults-cache-control" type="text" data-config-path="defaults.cache_control">
+            <small class="field-help">Value sent in the default Cache-Control response header.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="config-card">
+        <legend>Limits</legend>
+        <div class="field-grid">
+          <div class="field">
+            <label for="limits-max-header">Maximum header bytes</label>
+            <input id="limits-max-header" type="number" min="0" step="1" data-config-path="limits.max_header_bytes" data-value-type="number" data-nonnegative>
+            <small class="field-help">Maximum accepted request-header size; zero leaves the configured limit disabled.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="limits-max-body">Maximum body bytes</label>
+            <input id="limits-max-body" type="number" min="0" step="1" data-config-path="limits.max_body_bytes" data-value-type="number" data-nonnegative>
+            <small class="field-help">Maximum request body size accepted by the responder.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="limits-read-timeout">Read timeout</label>
+            <input id="limits-read-timeout" type="text" data-config-path="limits.read_timeout" data-duration>
+            <small class="field-help">A Go duration string, for example <code>2s</code>.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="limits-write-timeout">Write timeout</label>
+            <input id="limits-write-timeout" type="text" data-config-path="limits.write_timeout" data-duration>
+            <small class="field-help">Maximum response-writing time as a Go duration.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="limits-idle-timeout">Idle timeout</label>
+            <input id="limits-idle-timeout" type="text" data-config-path="limits.idle_timeout" data-duration>
+            <small class="field-help">Keep-alive idle timeout as a Go duration.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="limits-rate-per-ip">Rate per IP</label>
+            <input id="limits-rate-per-ip" type="number" min="0" step="any" data-config-path="limits.rate_per_ip" data-value-type="number" data-nonnegative>
+            <small class="field-help">Sustained requests per second allowed per client IP; zero disables limiting.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="limits-rate-burst">Rate burst</label>
+            <input id="limits-rate-burst" type="number" min="0" step="1" data-config-path="limits.rate_burst" data-value-type="number" data-nonnegative>
+            <small class="field-help">Temporary burst capacity per client IP.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="config-card">
+        <legend>Logging</legend>
+        <div class="field-grid">
+          <div class="field">
+            <label for="logging-level">Level</label>
+            <select id="logging-level" data-config-path="logging.level">
+              <option value="debug">Debug</option>
+              <option value="info">Info</option>
+              <option value="warn">Warn</option>
+              <option value="error">Error</option>
+            </select>
+            <small class="field-help">Minimum severity written to the application log.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field field-toggle">
+            <input id="logging-access" type="checkbox" data-config-path="logging.access_log" data-value-type="boolean">
+            <label for="logging-access">Access log</label>
+            <small class="field-help">Write one structured entry for every handled request.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field field-toggle">
+            <input id="logging-query" type="checkbox" data-config-path="logging.log_query" data-value-type="boolean">
+            <label for="logging-query">Log query strings</label>
+            <small class="field-help">Include URL query strings in access-log records.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field field-toggle">
+            <input id="logging-anonymize" type="checkbox" data-config-path="logging.anonymize_client" data-value-type="boolean">
+            <label for="logging-anonymize">Anonymize clients</label>
+            <small class="field-help">Mask client addresses before writing them to logs.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="config-card">
+        <legend>JSONP</legend>
+        <div class="field-grid">
+          <div class="field field-toggle">
+            <input id="jsonp-enabled" type="checkbox" data-config-path="jsonp.enabled" data-value-type="boolean">
+            <label for="jsonp-enabled">Enable JSONP</label>
+            <small class="field-help">Allow callback-wrapped responses for compatible requests.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="jsonp-param">Callback parameter</label>
+            <input id="jsonp-param" type="text" data-config-path="jsonp.param">
+            <small class="field-help">Query parameter containing the callback name, usually <code>callback</code>.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="config-card">
+        <legend>Admin</legend>
+        <div class="field-grid">
+          <div class="field field-toggle">
+            <input id="admin-enabled" type="checkbox" data-config-path="admin.enabled" data-value-type="boolean">
+            <label for="admin-enabled">Enable admin server</label>
+            <small class="field-help">Start this protected administration interface.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="admin-listen">HTTP listen address</label>
+            <input id="admin-listen" type="text" data-config-path="admin.listen" data-host-port>
+            <small class="field-help">Admin HTTP host and port, such as <code>127.0.0.1:8080</code>.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="admin-session-ttl">Session lifetime</label>
+            <input id="admin-session-ttl" type="text" data-config-path="admin.session_ttl" data-duration>
+            <small class="field-help">Signed login-session lifetime as a Go duration, such as <code>12h</code>.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="admin-login-rate">Login rate per IP</label>
+            <input id="admin-login-rate" type="number" min="0" step="any" data-config-path="admin.login_rate_per_ip" data-value-type="number" data-nonnegative>
+            <small class="field-help">Sustained login attempts per second allowed per client IP.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="admin-login-burst">Login burst</label>
+            <input id="admin-login-burst" type="number" min="0" step="1" data-config-path="admin.login_burst" data-value-type="number" data-nonnegative>
+            <small class="field-help">Temporary login-attempt burst capacity per client IP.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+        </div>
+
+        <fieldset class="nested-fieldset">
+          <legend>Admin TLS</legend>
+          <div class="field-grid">
+            <div class="field field-toggle">
+              <input id="admin-tls-enabled" type="checkbox" data-config-path="admin.tls.enabled" data-value-type="boolean">
+              <label for="admin-tls-enabled">Enable HTTPS</label>
+              <small class="field-help">Serve the admin interface over a dedicated TLS listener.</small>
+              <small class="field-error" aria-live="polite"></small>
+            </div>
+            <div class="field">
+              <label for="admin-tls-listen">HTTPS listen address</label>
+              <input id="admin-tls-listen" type="text" data-config-path="admin.tls.listen" data-host-port>
+              <small class="field-help">Admin HTTPS host and port, such as <code>127.0.0.1:8443</code>.</small>
+              <small class="field-error" aria-live="polite"></small>
+            </div>
+            <div class="field">
+              <label for="admin-tls-cert">Certificate file</label>
+              <input id="admin-tls-cert" type="text" data-config-path="admin.tls.cert_file">
+              <small class="field-help">Optional PEM certificate path; leave both file fields empty for self-signed TLS.</small>
+              <small class="field-error" aria-live="polite"></small>
+            </div>
+            <div class="field">
+              <label for="admin-tls-key">Key file</label>
+              <input id="admin-tls-key" type="text" data-config-path="admin.tls.key_file">
+              <small class="field-help">Optional PEM private-key path; must be paired with the certificate file.</small>
+              <small class="field-error" aria-live="polite"></small>
+            </div>
+            <div class="field field-toggle">
+              <input id="admin-tls-redirect" type="checkbox" data-config-path="admin.tls.redirect_http" data-value-type="boolean">
+              <label for="admin-tls-redirect">Redirect HTTP to HTTPS</label>
+              <small class="field-help">Send admin HTTP requests to the configured HTTPS listener.</small>
+              <small class="field-error" aria-live="polite"></small>
+            </div>
+          </div>
+        </fieldset>
+      </fieldset>
+
+      <div class="form-actions">
+        <button id="save-config" class="button button-primary" type="submit">Save configuration</button>
+        <p id="form-error" class="form-error" role="alert" aria-live="assertive"></p>
+      </div>
+    </form>
+
+    <section class="config-card import-export-card" aria-labelledby="import-export-heading">
+      <h2 id="import-export-heading">Import / Export</h2>
+      <p class="section-help">Download the current YAML for backup or sharing, or restore a complete configuration file.</p>
+      <div class="import-export-actions">
+        <div>
+          <h3>Export</h3>
+          <p class="section-help">Download the current live configuration as YAML.</p>
+          <a class="button button-secondary" href="/api/config/export" download="sinkhole-config.yaml">Export configuration</a>
+        </div>
+        <form id="import-config-form" class="import-config-form">
+          <h3>Import</h3>
+          <p class="raw-warning"><strong>Warning:</strong> importing replaces your whole config. The current file is backed up first.</p>
+          <div class="field">
+            <label for="import-config-file">Configuration YAML</label>
+            <input id="import-config-file" name="file" type="file" accept=".yaml,.yml,application/x-yaml,text/yaml" required>
+            <small class="field-help">Maximum upload size: 1 MiB.</small>
+          </div>
+          <div class="form-actions">
+            <button id="import-config" class="button button-primary" type="submit">Import and replace</button>
+            <p id="import-error" class="form-error" role="alert" aria-live="assertive"></p>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <details class="config-card raw-panel">
+      <summary>Advanced: raw YAML</summary>
+      <p class="raw-warning">Raw editing bypasses the friendly form. The server still validates the complete configuration before writing it.</p>
+      <div class="field field-toggle raw-toggle">
+        <input id="raw-edit-toggle" type="checkbox">
+        <label for="raw-edit-toggle">Edit raw (I know what I’m doing)</label>
+        <small class="field-help">The YAML is read-only until you explicitly enable editing.</small>
+      </div>
+      <label class="raw-label" for="raw-config">Configuration YAML</label>
+      <textarea id="raw-config" class="raw-editor" rows="24" readonly spellcheck="false"></textarea>
+      <div class="form-actions">
+        <button id="save-raw" class="button button-primary" type="button" disabled>Save raw YAML</button>
+        <p id="raw-error" class="form-error" role="alert" aria-live="assertive"></p>
+      </div>
+    </details>
+
+    <p id="success-toast" class="toast" role="status" aria-live="polite" hidden></p>
+  </main>
+  <script type="module" src="/assets/config.js"></script>
+  <script type="module" src="/assets/nav.js"></script>
+</body>
+</html>

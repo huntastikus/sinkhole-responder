@@ -1,0 +1,13 @@
+title: Meta Pixel
+description: Neutralizes Meta Pixel loader and signal configuration scripts.
+rules:
+  - name: facebook-pixel-events
+    host: connect.facebook.net
+    path_glob: "**/fbevents.js"
+    response:
+      embedded: stub-fbpixel
+  - name: facebook-pixel-signals-config
+    host: connect.facebook.net
+    path_glob: "**/signals/config/*"
+    response:
+      embedded: stub-fbpixel

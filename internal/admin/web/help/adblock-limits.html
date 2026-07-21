@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Adblock-defeat explained + honest limits · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell help-shell">
+    <a class="text-link back-link" href="/help/">← Back to help center</a>
+    <article class="config-card guide-card">
+      <p class="eyebrow">What the responder can and cannot do</p>
+      <h1>Adblock-defeat explained + honest limits</h1>
+      <p>Sinkhole Responder answers requests that DNS has <strong>already redirected to it</strong>. It can satisfy simple checks that only ask whether a resource loaded. Its curated JavaScript stubs also expose a few known globals so some pages do not fail immediately when an ad or analytics library is absent.</p>
+      <p>It is not a browser extension, cosmetic filter, proxy, or general HTTPS interceptor. A site-specific rule can model a small observed response, but it does not become the vendor.</p>
+
+      <h2>Hard limits: what it cannot do</h2>
+      <ul class="guide-steps">
+        <li>It does <strong>not block first-party or same-domain ads</strong> when the real hostname still resolves to the site's real server.</li>
+        <li>It cannot beat detection that never performs a DNS lookup through AdGuard Home: page-bundled logic, a hard-coded IP, DNS-over-HTTPS that bypasses your resolver, or a server-side check.</li>
+        <li>HTTPS needs deliberate CA trust on each client. Without that trust, certificate errors are correct and expected.</li>
+        <li>It cannot prove an ad <strong>impression</strong> to a vendor, mint vendor cookies or tokens, reproduce signed content, or satisfy arbitrary origin, credential, signature, or response checks.</li>
+        <li>It cannot satisfy <strong>Subresource Integrity (SRI)</strong> hashes for the original resource or bypass certificate pinning.</li>
+        <li>It cannot emulate QUIC/HTTP-3-only behavior. The responder serves TCP HTTP/1.1 and HTTP/2.</li>
+        <li>Browsers may classify a public hostname that resolves to a private LAN address as local-network access, then prompt or block the request according to browser policy.</li>
+      </ul>
+
+      <h2>What success looks like</h2>
+      <p>A redirected request receives a safe, valid response and the page continues when its checks are simple enough. Deep render verification or a server-gated “disable adblock to continue” flow can still fail.</p>
+      <p>The responder also does not remove page layout. An empty ad box can remain after its resource was replaced; that is expected. See <a class="text-link" href="/help/troubleshooting">Troubleshooting</a> or pair the responder with a browser cosmetic filter if you control the client.</p>
+
+      <p class="private-key-note">Test the actual browser and site. Browser versions and application-specific checks change, and this service cannot override client security policy. For HTTPS boundaries, see <a class="text-link" href="/help/tls-trust">TLS and trusting the CA</a>.</p>
+    </article>
+  </main>
+  <script type="module" src="/assets/nav.js"></script>
+</body>
+</html>

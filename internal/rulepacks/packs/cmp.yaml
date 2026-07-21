@@ -1,0 +1,14 @@
+title: Consent Management Platforms
+description: Neutralizes common OneTrust consent-management loaders.
+rules:
+  - name: cmp-onetrust-sdk
+    host: cdn.cookielaw.org
+    path_glob: "**/otSDKStub.js"
+    response:
+      embedded: stub-cmp
+  # Best-effort match for OneTrust banner SDK deployments.
+  - name: cmp-onetrust-banner
+    host: cdn.cookielaw.org
+    path_glob: "**/otBannerSdk.js"
+    response:
+      embedded: stub-cmp

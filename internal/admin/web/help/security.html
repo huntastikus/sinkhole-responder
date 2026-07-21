@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security and hardening · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell help-shell">
+    <a class="text-link back-link" href="/help/">← Back to help center</a>
+    <article class="config-card guide-card">
+      <p class="eyebrow">Operator checklist</p>
+      <h1>Security and hardening</h1>
+      <p>This service accepts requests carrying attacker-controlled hostnames, paths, and headers. Keep the deployment narrow even on a home or lab network.</p>
+
+      <h2>Run with least privilege</h2>
+      <ul class="guide-steps">
+        <li>Run the container as non-root UID/GID <code>65532</code>.</li>
+        <li>Drop all Linux capabilities, then restore only <code>NET_BIND_SERVICE</code> when binding ports <code>80</code> and <code>443</code>.</li>
+        <li>Use a read-only root filesystem, <code>no-new-privileges</code>, and only the state directory as writable storage.</li>
+        <li>Keep CA private keys and other private keys owner-readable only, normally mode <code>0600</code> or stricter.</li>
+      </ul>
+
+      <h2>Constrain the network</h2>
+      <ul class="guide-steps">
+        <li>Allow public responder ports only from trusted LAN subnets.</li>
+        <li>Keep management <code>/metrics</code> and <code>/healthz</code> on the default loopback listener. Never expose port <code>9090</code> publicly.</li>
+        <li>The responder needs no initiated outbound traffic. Enforce a suitable no-egress policy where your runtime supports it, while still allowing response traffic back to trusted clients.</li>
+      </ul>
+
+      <p>Use the hardened Compose or systemd example supplied with the project as your baseline. The deployment README's <strong>Security hardening</strong> section includes LAN firewall examples and the operational details behind this checklist.</p>
+
+      <div class="danger-callout" role="note">
+        <strong>Protect the local CA</strong>
+        <p>A client that trusts this CA accepts certificates it signs for any HTTPS hostname. Use it only on controlled lab/home devices, never distribute it, and remove trust when the experiment ends.</p>
+      </div>
+    </article>
+  </main>
+  <script type="module" src="/assets/nav.js"></script>
+</body>
+</html>

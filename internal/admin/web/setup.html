@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Set up · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body class="auth-body">
+  <main class="auth-shell">
+    <section class="auth-card" aria-labelledby="auth-heading">
+      <div class="auth-lockup">
+        <span class="auth-mark" aria-hidden="true">
+          <span class="auth-ring"></span>
+          <span class="auth-ring"></span>
+          <span class="auth-ring"></span>
+          <span class="auth-core"></span>
+        </span>
+        <span class="auth-wordmark">Sinkhole Responder</span>
+      </div>
+      <p class="auth-eyebrow">First-run setup</p>
+      <h1 id="auth-heading" class="auth-heading">Protect the admin console</h1>
+      <p class="auth-lede">Create an admin password to lock the console. Use at least 10 characters.</p>
+      {{if .Error}}<p id="auth-error" class="auth-error" role="alert">{{.Error}}</p>{{end}}
+      <form class="auth-form" method="post" action="/setup">
+        <label class="auth-label" for="password">New admin password</label>
+        <input class="auth-input" id="password" name="password" type="password" required minlength="10" autocomplete="new-password"{{if .Error}} aria-invalid="true" aria-describedby="auth-error"{{else}} autofocus{{end}}>
+        <button class="button button-primary auth-submit" type="submit">Create password</button>
+      </form>
+    </section>
+    <p class="auth-footnote">This is the only account — keep the password somewhere safe.</p>
+  </main>
+</body>
+</html>

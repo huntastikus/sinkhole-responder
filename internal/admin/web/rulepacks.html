@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rule packs · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+  <script type="module" src="/assets/rulepacks.js"></script>
+  <script type="module" src="/assets/nav.js"></script>
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell rulepacks-shell">
+    <header class="settings-header">
+      <div>
+        <p class="eyebrow">Sinkhole Responder</p>
+        <h1>Rule packs</h1>
+        <p class="settings-intro">Enable curated rule packs to neutralize common ad/tracking scripts with harmless stubs.</p>
+        <p class="section-help rulepacks-note">Packs stack on top of your own rules, so user rules win. You can test the result with the detector page.</p>
+      </div>
+    </header>
+
+    <aside id="rulepacks-banner" class="banner config-banner" role="alert" hidden>
+      <span id="rulepacks-banner-message" data-banner-message></span>
+      <button id="reload-rulepacks" class="button button-secondary button-small" type="button" hidden>Reload rule packs</button>
+    </aside>
+
+    <section id="rulepack-list" class="rulepack-grid" aria-label="Available rule packs" aria-busy="true"></section>
+    <p id="rulepacks-status" class="form-error rulepacks-status" aria-live="polite"></p>
+  </main>
+
+  <p id="rulepacks-toast" class="toast" role="status" aria-live="polite" hidden></p>
+</body>
+</html>

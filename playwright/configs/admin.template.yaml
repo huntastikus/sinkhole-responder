@@ -1,0 +1,19 @@
+state_dir: ""
+listen:
+  http: ["127.0.0.1:8083"]
+  https: []
+tls:
+  mode: disabled
+management:
+  enabled: true
+  listen: "127.0.0.1:9092"
+admin:
+  enabled: true
+  listen: "127.0.0.1:8082"
+  tls:
+    enabled: false
+rulepacks:
+  enabled: []
+defaults:
+  status: 200
+rules: []

@@ -1,0 +1,18 @@
+title: Google Publisher Tag
+description: Neutralizes Google Publisher Tag scripts with an API-compatible stub.
+rules:
+  - name: gpt-securepubads-tag
+    host: securepubads.g.doubleclick.net
+    path_glob: "**/tag/js/gpt.js"
+    response:
+      embedded: stub-gpt
+  - name: gpt-securepubads-versioned
+    host: securepubads.g.doubleclick.net
+    path_glob: "**/gpt/*.js"
+    response:
+      embedded: stub-gpt
+  - name: gpt-googletagservices-tag
+    host: www.googletagservices.com
+    path_glob: "**/tag/js/gpt.js"
+    response:
+      embedded: stub-gpt

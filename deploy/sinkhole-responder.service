@@ -1,0 +1,61 @@
+[Unit]
+Description=Sinkhole Responder
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/sinkhole-responder --config %S/sinkhole-responder/config.yaml
+ExecReload=/bin/kill -HUP $MAINPID
+
+# StateDirectory keeps the live config and all GUI-managed state co-located.
+# On first run, the application seeds config.yaml from its built-in defaults.
+DynamicUser=yes
+StateDirectory=sinkhole-responder
+
+# Only direct binds to production ports 80/443 need this capability. Deployments
+# listening on 8080 can remove both capability directives.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=yes
+
+# Protect the host filesystem while allowing only the state directory to be written.
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=%S/sinkhole-responder
+
+# The service uses network sockets and standard Go runtime facilities only; it
+# needs no devices, host temporary files, kernel controls, namespaces, or JIT.
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+
+# Optional egress containment: the service needs no initiated outbound traffic,
+# but its response traffic must reach clients. This allow-list constrains every
+# address the service can communicate with, including replies; adjust it to the
+# actual LAN before enabling. Do not treat it as the client-ingress firewall
+# policy. Restrict who can reach ports 80/443 with nftables/ufw (documented in T14).
+# IPAddressAllow=localhost
+# IPAddressAllow=10.0.0.0/8
+# IPAddressAllow=172.16.0.0/12
+# IPAddressAllow=192.168.0.0/16
+# IPAddressAllow=fc00::/7
+# IPAddressDeny=any
+
+# Restart on any exit, not only failure, so the admin GUI's "Restart now" button
+# — which applies startup-only settings by exiting cleanly — is relaunched. An
+# explicit `systemctl stop` is honored and never auto-restarted. systemd's default
+# start-rate limit (5 starts / 10s) still bounds a bad-config crash loop.
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

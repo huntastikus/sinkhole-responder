@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sinkhole Responder Detector</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { max-width: 64rem; margin: 3rem auto; padding: 0 1rem; line-height: 1.5; }
+    h2 { margin-top: 2.5rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.6rem; border-bottom: 1px solid #8888; text-align: left; }
+    [data-status="PASS"] { color: #16833b; font-weight: 700; }
+    [data-status="FAIL"] { color: #c42b1c; font-weight: 700; }
+    [data-live-status="sinkholed"] { color: #16833b; font-weight: 700; }
+    [data-live-status="not-blocked"] { color: #a05a00; font-weight: 700; }
+    [data-live-status="unreachable"] { color: #c42b1c; font-weight: 700; }
+    [data-live-status="skipped"] { color: #666; }
+    .result-detail { display: block; margin-top: 0.2rem; font-size: 0.85rem; font-weight: 400; }
+    iframe { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sinkhole Responder Detector</h1>
+    <p>
+      These checks exercise generic resource placeholders and blocked-network stubs.
+      Set the responder URL with <code>?base=http://127.0.0.1:8080</code>.
+    </p>
+    <p>
+      Run this page on a <strong>separate origin from the admin UI</strong>. Green means the
+      sinkhole's harmless marked stub loaded; amber means the real script loaded and is not
+      blocked; red means the script was unreachable or the responder certificate was not trusted.
+    </p>
+  </header>
+  <h2>Responder checks</h2>
+  <table id="results">
+    <thead><tr><th>Check</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Image load</td><td data-check="image">PENDING</td></tr>
+      <tr><td>Script load</td><td data-check="script">PENDING</td></tr>
+      <tr><td>JSON fetch</td><td data-check="fetch">PENDING</td></tr>
+      <tr><td>Expected vendor global</td><td data-check="expected-global">PENDING</td></tr>
+      <tr><td>Iframe load</td><td data-check="iframe">PENDING</td></tr>
+      <tr><td>CORS preflight</td><td data-check="cors-preflight">PENDING</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Blocked-network checks</h2>
+  <p>
+    These requests use real ad-network hostnames. They reach a marked stub only when DNS blocking,
+    an enabled rulepack, and certificate trust are all working on this browsing device.
+  </p>
+  <table id="network-results">
+    <thead><tr><th>Network</th><th>Script URL</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>adsense</td><td><code>pagead2.googlesyndication.com/pagead/js/adsbygoogle.js</code></td><td data-network="adsense">PENDING</td></tr>
+      <tr><td>gpt</td><td><code>securepubads.g.doubleclick.net/tag/js/gpt.js</code></td><td data-network="gpt">PENDING</td></tr>
+      <tr><td>fbpixel</td><td><code>connect.facebook.net/en_US/fbevents.js</code></td><td data-network="fbpixel">PENDING</td></tr>
+      <tr><td>ga</td><td><code>www.googletagmanager.com/gtag/js</code></td><td data-network="ga">PENDING</td></tr>
+      <tr><td>apstag</td><td><code>c.amazon-adsystem.com/aax2/apstag.js</code></td><td data-network="apstag">PENDING</td></tr>
+      <tr><td>prebid</td><td>Varies (first-party)</td><td data-network="prebid">PENDING</td></tr>
+      <tr><td>cmp</td><td><code>cdn.cookielaw.org/otSDKStub.js</code></td><td data-network="cmp">PENDING</td></tr>
+      <tr><td>antiadblock</td><td>Varies (path-based)</td><td data-network="antiadblock">PENDING</td></tr>
+    </tbody>
+  </table>
+
+  <script>
+    (() => {
+      const checks = ["image", "script", "fetch", "expected-global", "iframe", "cors-preflight"];
+      const pending = new Set(checks);
+      const base = (new URLSearchParams(location.search).get("base") || "http://127.0.0.1:8080").replace(/\/+$/, "");
+      let resolveDone;
+
+      window.__results = {};
+      window.__detectorsDone = new Promise((resolve) => { resolveDone = resolve; });
+
+      function setResult(check, result) {
+        if (!pending.delete(check)) return;
+        window.__results[check] = result;
+        const cell = document.querySelector(`[data-check="${check}"]`);
+        cell.textContent = result;
+        cell.dataset.status = result;
+        if (pending.size === 0) resolveDone();
+      }
+
+      function loadScript(path, onload) {
+        const script = document.createElement("script");
+        script.src = base + path;
+        script.onload = onload;
+        script.onerror = () => onload(false);
+        document.head.appendChild(script);
+      }
+
+      const image = new Image();
+      image.onload = () => setResult("image", "PASS");
+      image.onerror = () => setResult("image", "FAIL");
+      image.src = `${base}/detector/pixel.png?cb=${Math.random()}`;
+
+      loadScript("/detector/lib.js", (loaded = true) => setResult("script", loaded ? "PASS" : "FAIL"));
+
+      fetch(base + "/detector/data.json")
+        .then(async (response) => {
+          if (!response.ok) throw new Error("non-success response");
+          await response.json();
+          setResult("fetch", "PASS");
+        })
+        .catch(() => setResult("fetch", "FAIL"));
+
+      loadScript("/sdk/exampleads.js", (loaded = true) => {
+        const available = loaded && typeof globalThis.ExampleAds !== "undefined" &&
+          globalThis.ExampleAds.loaded === true;
+        setResult("expected-global", available ? "PASS" : "FAIL");
+      });
+
+      const frameUrl = base + "/detector/frame.html";
+      const iframe = document.createElement("iframe");
+      iframe.onload = () => {
+        fetch(frameUrl)
+          .then((response) => {
+            const contentType = response.headers.get("content-type") || "";
+            setResult("iframe", response.ok && contentType.includes("text/html") ? "PASS" : "FAIL");
+          })
+          .catch(() => setResult("iframe", "FAIL"));
+      };
+      iframe.onerror = () => setResult("iframe", "FAIL");
+      iframe.src = frameUrl;
+      document.body.appendChild(iframe);
+
+      fetch(base + "/detector/data.json", { method: "GET", headers: { "X-Detector": "1" } })
+        .then((response) => setResult("cors-preflight", response.ok ? "PASS" : "FAIL"))
+        .catch(() => setResult("cors-preflight", "FAIL"));
+
+      setTimeout(() => {
+        for (const check of [...pending]) setResult(check, "FAIL");
+      }, 5000);
+
+      const networkChecks = [
+        {
+          name: "adsense",
+          url: "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js",
+          globalPresent: () => typeof window.adsbygoogle !== "undefined",
+        },
+        {
+          name: "gpt",
+          url: "https://securepubads.g.doubleclick.net/tag/js/gpt.js",
+          globalPresent: () => typeof window.googletag !== "undefined",
+        },
+        {
+          name: "fbpixel",
+          url: "https://connect.facebook.net/en_US/fbevents.js",
+          globalPresent: () => typeof window.fbq !== "undefined",
+        },
+        {
+          name: "ga",
+          url: "https://www.googletagmanager.com/gtag/js",
+          globalPresent: () => typeof window.gtag !== "undefined" || typeof window.ga !== "undefined",
+        },
+        {
+          name: "apstag",
+          url: "https://c.amazon-adsystem.com/aax2/apstag.js",
+          globalPresent: () => typeof window.apstag !== "undefined",
+        },
+        { name: "prebid", note: "Skipped — varies (first-party)" },
+        {
+          name: "cmp",
+          url: "https://cdn.cookielaw.org/otSDKStub.js",
+          globalPresent: () => typeof window.__tcfapi !== "undefined",
+        },
+        { name: "antiadblock", note: "Skipped — varies (path-based)" },
+      ];
+
+      let resolveNetworkDone;
+      window.__networkResults = {};
+      window.__networkDetectorsDone = new Promise((resolve) => { resolveNetworkDone = resolve; });
+
+      function setNetworkResult(network, status, label, detail = "") {
+        const cell = document.querySelector(`[data-network="${network.name}"]`);
+        const summary = document.createElement("span");
+        summary.textContent = label;
+        cell.replaceChildren(summary);
+        if (detail) {
+          const explanation = document.createElement("span");
+          explanation.className = "result-detail";
+          explanation.textContent = detail;
+          cell.appendChild(explanation);
+        }
+        cell.dataset.liveStatus = status;
+        window.__networkResults[network.name] = { status, label, detail };
+      }
+
+      function loadNetworkScript(network) {
+        if (!network.url) {
+          setNetworkResult(network, "skipped", network.note);
+          return Promise.resolve();
+        }
+
+        return new Promise((resolve) => {
+          const script = document.createElement("script");
+          let finished = false;
+          const finish = (loaded) => {
+            if (finished) return;
+            finished = true;
+            clearTimeout(timeout);
+
+            if (window.__sinkholeStubs?.[network.name] === true) {
+              setNetworkResult(network, "sinkholed", "Sinkholed (harmless stub served)");
+            } else if (loaded) {
+              const detail = network.globalPresent()
+                ? "The expected vendor global is present."
+                : "The script loaded without the sinkhole marker.";
+              setNetworkResult(network, "not-blocked", "NOT blocked — real script loaded", detail);
+            } else {
+              setNetworkResult(
+                network,
+                "unreachable",
+                "Unreachable / certificate not trusted",
+                "Check the DNS block and local CA trust.",
+              );
+            }
+            resolve();
+          };
+          const timeout = setTimeout(() => finish(false), 5000);
+          script.onload = () => finish(true);
+          script.onerror = () => finish(false);
+          script.src = network.url;
+          document.head.appendChild(script);
+        });
+      }
+
+      Promise.all(networkChecks.map(loadNetworkScript)).then(resolveNetworkDone);
+    })();
+  </script>
+</body>
+</html>

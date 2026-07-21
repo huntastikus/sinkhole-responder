@@ -1,0 +1,23 @@
+title: Google Analytics
+description: Neutralizes common Google Analytics and Tag Manager loaders.
+rules:
+  - name: analytics-universal
+    host: www.google-analytics.com
+    path_glob: "**/analytics.js"
+    response:
+      embedded: stub-ga
+  - name: analytics-legacy-ssl
+    host: ssl.google-analytics.com
+    path_glob: "**/ga.js"
+    response:
+      embedded: stub-ga
+  - name: analytics-gtag
+    host: www.googletagmanager.com
+    path_glob: "**/gtag/js*"
+    response:
+      embedded: stub-ga
+  - name: analytics-tag-manager
+    host: www.googletagmanager.com
+    path_glob: "**/gtm.js"
+    response:
+      embedded: stub-ga

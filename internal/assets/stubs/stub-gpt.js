@@ -1,0 +1,12 @@
+window.__sinkholeStubs = window.__sinkholeStubs || {};
+window.__sinkholeStubs["gpt"] = true;
+window.googletag = window.googletag || {};
+googletag.cmd = googletag.cmd || [];
+googletag.cmd.push = function (fn) { try { if (typeof fn === "function") fn(); } catch (e) {} return 1; };
+var pubads = { refresh: function () {}, enableSingleRequest: function () {}, setTargeting: function () { return pubads; }, disableInitialLoad: function () {}, collapseEmptyDivs: function () {}, addEventListener: function () {}, setCentering: function () {} };
+googletag.pubads = function () { return pubads; };
+googletag.defineSlot = function () { var slot = { addService: function () { return slot; }, setTargeting: function () { return slot; }, setCollapseEmptyDiv: function () { return slot; }, defineSizeMapping: function () { return slot; } }; return slot; };
+googletag.defineOutOfPageSlot = googletag.defineSlot;
+googletag.enableServices = function () {};
+googletag.display = function () {};
+googletag.sizeMapping = function () { var b = { addSize: function () { return b; }, build: function () { return []; } }; return b; };

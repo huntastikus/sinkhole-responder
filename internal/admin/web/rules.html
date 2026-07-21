@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rules · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell rules-shell">
+    <header class="settings-header">
+      <div>
+        <p class="eyebrow">Response routing</p>
+        <h1>Rule builder</h1>
+        <p class="settings-intro">Define which requests get a specific placeholder response, then test the active rules without making a network request.</p>
+      </div>
+    </header>
+
+    <section id="rules-banner" class="banner config-banner" role="alert" aria-live="assertive" hidden>
+      <span id="rules-banner-message" data-banner-message></span>
+      <button id="reload-rules" class="button button-secondary" type="button" hidden>Reload</button>
+    </section>
+
+    <div class="rules-workspace">
+      <section class="config-card rule-list-card" aria-labelledby="rule-list-heading">
+        <div class="list-editor-header">
+          <div>
+            <h2 id="rule-list-heading">Rules</h2>
+            <p class="section-help first-match-note">Rules are evaluated top-to-bottom; the <strong>FIRST match wins.</strong></p>
+          </div>
+          <button id="add-rule" class="button button-small" type="button">Add rule</button>
+        </div>
+        <ol id="rule-list" class="rule-list"></ol>
+        <div class="form-actions rule-list-actions">
+          <button id="save-rules" class="button button-primary" type="button">Save rules</button>
+          <p id="rules-error" class="form-error" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <div class="rules-side-panels">
+        <form id="rule-editor" class="config-form" novalidate hidden>
+          <fieldset class="config-card">
+            <legend id="rule-editor-title">Add rule</legend>
+            <p class="section-help">A rule needs at least one matcher. Filled matchers must all match the request.</p>
+
+            <div class="field-grid">
+              <div class="field">
+                <label for="rule-name">Name</label>
+                <input id="rule-name" type="text" autocomplete="off">
+                <small class="field-help">A short label shown in the rule list and preview.</small>
+              </div>
+              <div class="field">
+                <label for="rule-method">Method</label>
+                <select id="rule-method">
+                  <option value="">Any method</option>
+                  <option value="GET">GET</option>
+                  <option value="HEAD">HEAD</option>
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="PATCH">PATCH</option>
+                  <option value="DELETE">DELETE</option>
+                  <option value="OPTIONS">OPTIONS</option>
+                </select>
+                <small class="field-help">Leave as any to match every HTTP method.</small>
+              </div>
+              <div class="field">
+                <label for="rule-host">Host</label>
+                <input id="rule-host" type="text" autocomplete="off" placeholder="pagead2.googlesyndication.com">
+                <small class="field-help">Exact hostname, without a scheme or path.</small>
+              </div>
+              <div class="field">
+                <label for="rule-host-glob">Host glob</label>
+                <input id="rule-host-glob" type="text" autocomplete="off" placeholder="*.example.com">
+                <small class="field-help">Shell-style hostname pattern. Use an exact host when possible.</small>
+              </div>
+              <div class="field">
+                <label for="rule-path-glob">Path glob</label>
+                <input id="rule-path-glob" type="text" autocomplete="off" placeholder="/ads/*">
+                <small class="field-help">Shell-style URL path pattern; query parameters are excluded.</small>
+              </div>
+              <div class="field">
+                <label for="rule-path-regex">Path regular expression</label>
+                <input id="rule-path-regex" type="text" autocomplete="off" placeholder="^/ad(s|server)/">
+                <small class="field-help">Go regular expression matched against the URL path.</small>
+              </div>
+              <div class="field">
+                <label for="rule-sec-fetch-dest">Sec-Fetch-Dest</label>
+                <input id="rule-sec-fetch-dest" type="text" autocomplete="off" placeholder="script">
+                <small class="field-help">Browser destination such as script, image, style, or iframe.</small>
+              </div>
+              <div class="field">
+                <label for="rule-accept">Accept contains</label>
+                <input id="rule-accept" type="text" autocomplete="off" placeholder="javascript">
+                <small class="field-help">Case-insensitive text that must appear in the Accept header.</small>
+              </div>
+            </div>
+
+            <section class="pair-section" aria-labelledby="query-heading">
+              <div class="list-editor-header">
+                <div>
+                  <h2 id="query-heading">Query matchers</h2>
+                  <p class="section-help">An empty value means the query key only needs to be present.</p>
+                </div>
+                <button id="add-query" class="button button-small" type="button">Add query</button>
+              </div>
+              <div id="query-list" class="repeat-list"></div>
+            </section>
+
+            <section class="pair-section" aria-labelledby="request-headers-heading">
+              <div class="list-editor-header">
+                <div>
+                  <h2 id="request-headers-heading">Request header matchers</h2>
+                  <p class="section-help">Header names are case-insensitive; values are matched exactly.</p>
+                </div>
+                <button id="add-request-header" class="button button-small" type="button">Add header</button>
+              </div>
+              <div id="request-header-list" class="repeat-list"></div>
+            </section>
+
+            <fieldset class="nested-fieldset response-editor">
+              <legend>Response</legend>
+              <div class="mode-toggle" role="radiogroup" aria-label="Response body mode">
+                <label><input id="response-mode-embedded" type="radio" name="response-mode" value="embedded" checked> Embedded asset</label>
+                <label><input id="response-mode-custom" type="radio" name="response-mode" value="custom"> Custom body</label>
+              </div>
+
+              <div id="embedded-response-fields" class="field">
+                <label for="response-embedded">Embedded asset</label>
+                <select id="response-embedded"></select>
+                <small class="field-help">A built-in, media-safe response body. Its content type is selected automatically.</small>
+              </div>
+
+              <div id="custom-response-fields" class="custom-response-fields" hidden>
+                <div class="field">
+                  <label for="response-body">Body</label>
+                  <textarea id="response-body" rows="8" spellcheck="false"></textarea>
+                  <small class="field-help">Literal response body. Saving replaces any file/base64 body source on this rule.</small>
+                </div>
+                <div class="field">
+                  <label for="response-content-type">Content-Type</label>
+                  <input id="response-content-type" type="text" autocomplete="off" placeholder="application/javascript">
+                  <small class="field-help">Leave empty to infer a type from the previewed request.</small>
+                </div>
+              </div>
+
+              <div class="field-grid response-options">
+                <div class="field">
+                  <label for="response-status">Status</label>
+                  <input id="response-status" type="number" min="0" max="599" step="1" value="200">
+                  <small class="field-help">HTTP status from 100–599, or 0 to use the configured default.</small>
+                </div>
+                <div class="field">
+                  <label for="response-delay">Delay (milliseconds)</label>
+                  <input id="response-delay" type="number" min="0" max="10000" step="1" value="0">
+                  <small class="field-help">Artificial delay before responding, from 0 through 10000 ms.</small>
+                </div>
+              </div>
+
+              <section class="pair-section" aria-labelledby="response-headers-heading">
+                <div class="list-editor-header">
+                  <div>
+                    <h2 id="response-headers-heading">Extra response headers</h2>
+                    <p class="section-help">Headers added to the selected response.</p>
+                  </div>
+                  <button id="add-response-header" class="button button-small" type="button">Add header</button>
+                </div>
+                <div id="response-header-list" class="repeat-list"></div>
+              </section>
+            </fieldset>
+
+            <div class="form-actions">
+              <button class="button button-primary" type="submit">Apply rule</button>
+              <button id="cancel-rule" class="button" type="button">Cancel</button>
+              <p id="editor-error" class="form-error" aria-live="polite"></p>
+            </div>
+          </fieldset>
+        </form>
+
+        <section class="config-card preview-card" aria-labelledby="preview-heading">
+          <div>
+            <p class="eyebrow">Dry run</p>
+            <h2 id="preview-heading">Live preview</h2>
+            <p class="section-help">Test the currently saved user rules through the same response-selection chain used by the responder.</p>
+          </div>
+          <form id="preview-form" class="preview-form">
+            <div class="field-grid">
+              <div class="field">
+                <label for="preview-method">Method</label>
+                <select id="preview-method">
+                  <option>GET</option>
+                  <option>HEAD</option>
+                  <option>POST</option>
+                  <option>PUT</option>
+                  <option>PATCH</option>
+                  <option>DELETE</option>
+                  <option>OPTIONS</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="preview-path">Path</label>
+                <input id="preview-path" type="text" value="/pagead/js/adsbygoogle.js">
+              </div>
+              <div class="field">
+                <label for="preview-host">Host</label>
+                <input id="preview-host" type="text" value="pagead2.googlesyndication.com">
+              </div>
+              <div class="field">
+                <label for="preview-dest">Sec-Fetch-Dest</label>
+                <input id="preview-dest" type="text" value="script">
+              </div>
+              <div class="field">
+                <label for="preview-accept">Accept</label>
+                <input id="preview-accept" type="text" value="*/*">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button id="run-preview" class="button button-primary" type="submit">Preview</button>
+              <p id="preview-error" class="form-error" aria-live="polite"></p>
+            </div>
+          </form>
+
+          <section id="preview-result" class="preview-result" aria-live="polite" aria-atomic="true" hidden>
+            <dl class="preview-facts">
+              <div><dt>Matched rule</dt><dd id="preview-rule">—</dd></div>
+              <div><dt>Kind</dt><dd id="preview-kind">—</dd></div>
+              <div><dt>Status</dt><dd id="preview-status">—</dd></div>
+              <div><dt>Content-Type</dt><dd id="preview-content-type">—</dd></div>
+              <div><dt>Delay</dt><dd id="preview-delay">—</dd></div>
+            </dl>
+            <p class="preview-body-label">Body preview <span id="preview-truncated"></span></p>
+            <pre id="preview-body" tabindex="0"></pre>
+          </section>
+        </section>
+      </div>
+    </div>
+
+    <p id="rules-status" class="sr-only" aria-live="polite"></p>
+  </main>
+  <script type="module" src="/assets/rules.js"></script>
+  <script type="module" src="/assets/nav.js"></script>
+</body>
+</html>

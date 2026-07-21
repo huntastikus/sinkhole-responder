@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Setup wizard · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell tls-shell">
+    <header class="settings-header">
+      <div>
+        <p class="eyebrow">Sinkhole Responder</p>
+        <h1>Setup wizard</h1>
+        <p class="settings-intro">Choose how this responder works on your network, then get the exact AdGuard Home settings to paste.</p>
+      </div>
+    </header>
+
+    <nav class="config-card" aria-label="Wizard progress">
+      <p id="wizard-progress" class="eyebrow">Step 1 of 6</p>
+      <ol id="wizard-step-list">
+        <li aria-current="step">Welcome</li>
+        <li>Access mode</li>
+        <li>Certificate authority</li>
+        <li>Protection</li>
+        <li>AdGuard Home</li>
+        <li>Done</li>
+      </ol>
+    </nav>
+
+    <p id="wizard-announcement" class="sr-only" role="status" aria-live="polite"></p>
+
+    <div class="tls-layout">
+      <section class="config-card tls-card tls-guides" data-wizard-step aria-labelledby="step-lan-heading">
+        <p class="eyebrow">Welcome</p>
+        <h2 id="step-lan-heading" tabindex="-1">Choose this responder’s LAN IP</h2>
+        <p class="section-help">AdGuard Home will send blocked domains to this address so the responder can return harmless placeholders.</p>
+
+        <fieldset class="nested-fieldset">
+          <legend>Detected addresses</legend>
+          <div id="lan-ip-options" class="repeat-list" aria-live="polite"></div>
+        </fieldset>
+        <div class="field raw-panel">
+          <label for="manual-ip">Or enter an address</label>
+          <input id="manual-ip" type="text" inputmode="text" autocomplete="off" placeholder="192.168.1.20">
+          <small class="field-help">Use the address of the machine running Sinkhole Responder.</small>
+        </div>
+        <div class="form-actions">
+          <button id="reload-lan-ips" class="button button-secondary" type="button">Detect again</button>
+          <p id="lan-ip-status" class="form-error" role="alert"></p>
+        </div>
+      </section>
+
+      <section class="config-card tls-card tls-guides" data-wizard-step aria-labelledby="step-mode-heading" hidden>
+        <p class="eyebrow">Access mode</p>
+        <h2 id="step-mode-heading" tabindex="-1">Choose HTTP or HTTPS placeholders</h2>
+        <fieldset class="nested-fieldset">
+          <legend>Responder mode</legend>
+          <div class="repeat-list">
+            <label class="repeat-item field-toggle" for="mode-https">
+              <input id="mode-https" name="access-mode" type="radio" value="https" checked>
+              <span><strong>HTTPS (recommended)</strong><br><small class="field-help">Covers HTTPS ad and tracker URLs, but each client must trust your local CA.</small></span>
+            </label>
+            <label class="repeat-item field-toggle" for="mode-http">
+              <input id="mode-http" name="access-mode" type="radio" value="http">
+              <span><strong>HTTP only (simple)</strong><br><small class="field-help">Needs no trusted CA, but cannot provide trusted HTTPS placeholders.</small></span>
+            </label>
+          </div>
+        </fieldset>
+      </section>
+
+      <section class="config-card tls-card tls-guides" data-wizard-step aria-labelledby="step-ca-heading" hidden>
+        <p class="eyebrow">HTTPS certificate authority</p>
+        <h2 id="step-ca-heading" tabindex="-1">Generate and trust a local CA</h2>
+        <div class="danger-callout" role="note">
+          <strong>High-trust certificate authority</strong>
+          <p>This CA can impersonate ANY HTTPS site to clients that trust it. Use it only in an isolated lab/home environment and only on devices you control.</p>
+        </div>
+        <p class="section-help">Generate the CA, activate local-CA mode, download its public certificate, then install it with the guide for each client.</p>
+        <div class="form-actions">
+          <button id="setup-ca" class="button button-primary" type="button">Generate and activate CA</button>
+          <p id="ca-status" class="form-error" role="alert" aria-live="assertive"></p>
+        </div>
+        <section id="ca-result" class="action-result" aria-labelledby="ca-result-heading" hidden>
+          <h3 id="ca-result-heading">CA generated</h3>
+          <p>SHA-256 fingerprint</p>
+          <code id="ca-fingerprint" class="fingerprint"></code>
+          <p id="ca-server-warning"></p>
+          <div class="result-actions">
+            <a class="button" href="/api/ca/download">Download CA certificate</a>
+          </div>
+          <h3>Trust guides</h3>
+          <ul class="guide-links">
+            <li><a href="/help/trust-windows"><span>Windows</span><span aria-hidden="true">→</span></a></li>
+            <li><a href="/help/trust-macos"><span>macOS</span><span aria-hidden="true">→</span></a></li>
+            <li><a href="/help/trust-ios"><span>iOS / iPadOS</span><span aria-hidden="true">→</span></a></li>
+            <li><a href="/help/trust-android"><span>Android</span><span aria-hidden="true">→</span></a></li>
+            <li><a href="/help/trust-debian"><span>Debian / Ubuntu</span><span aria-hidden="true">→</span></a></li>
+            <li><a href="/help/trust-firefox"><span>Firefox</span><span aria-hidden="true">→</span></a></li>
+            <li><a href="/help/trust-chrome"><span>Chrome / Chromium</span><span aria-hidden="true">→</span></a></li>
+          </ul>
+        </section>
+      </section>
+
+      <section class="config-card tls-card tls-guides" data-wizard-step aria-labelledby="step-protection-heading" hidden>
+        <p class="eyebrow">Protection</p>
+        <h2 id="step-protection-heading" tabindex="-1">Enable recommended rule packs</h2>
+        <p class="section-help">The recommended pack adds curated harmless responses for common adblock-detection scripts. Your own rules still take priority.</p>
+        <div class="form-actions">
+          <button id="enable-protection" class="button button-primary" type="button">Enable recommended protection</button>
+          <p id="protection-status" class="form-error" role="alert" aria-live="assertive"></p>
+        </div>
+      </section>
+
+      <section class="config-card tls-card tls-guides" data-wizard-step aria-labelledby="step-agh-heading" hidden>
+        <p class="eyebrow">AdGuard Home</p>
+        <h2 id="step-agh-heading" tabindex="-1">Point AdGuard Home here</h2>
+        <p class="section-help">Apply these settings in AdGuard Home. This wizard never connects to or modifies AdGuard Home.</p>
+        <p>Responder address: <code id="agh-ip"></code></p>
+        <ol id="agh-steps" class="guide-steps"></ol>
+        <label class="raw-label" for="agh-yaml">YAML configuration</label>
+        <textarea id="agh-yaml" class="raw-editor" rows="7" readonly></textarea>
+        <div class="result-actions">
+          <button id="copy-agh-yaml" class="button button-primary" type="button" disabled>Copy YAML</button>
+          <button id="reload-agh-config" class="button button-secondary" type="button">Retry</button>
+        </div>
+        <p id="agh-warning" class="private-key-note" hidden></p>
+        <p id="agh-status" class="form-error" role="alert" aria-live="assertive"></p>
+      </section>
+
+      <section class="config-card tls-card tls-guides" data-wizard-step aria-labelledby="step-done-heading" hidden>
+        <p class="eyebrow">Complete</p>
+        <h2 id="step-done-heading" tabindex="-1">Setup is ready</h2>
+        <dl class="status-list">
+          <div><dt>Responder address</dt><dd id="summary-ip"></dd></div>
+          <div><dt>Access mode</dt><dd id="summary-mode"></dd></div>
+          <div><dt>Local CA</dt><dd id="summary-ca"></dd></div>
+          <div><dt>Recommended protection</dt><dd id="summary-protection"></dd></div>
+        </dl>
+        <div class="result-actions">
+          <a class="button button-primary" href="/">Open dashboard</a>
+          <a class="button" href="/rules">Manage rules</a>
+          <a class="button" href="/tools/detector">Run detector</a>
+        </div>
+      </section>
+    </div>
+
+    <div class="form-actions">
+      <button id="wizard-back" class="button button-secondary" type="button" hidden>Back</button>
+      <button id="wizard-next" class="button button-primary" type="button">Next</button>
+      <p id="wizard-error" class="form-error" role="alert" aria-live="assertive"></p>
+    </div>
+  </main>
+  <script type="module" src="/assets/wizard.js"></script>
+  <script type="module" src="/assets/nav.js"></script>
+</body>
+</html>

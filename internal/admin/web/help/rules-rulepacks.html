@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rules and rulepacks · Sinkhole Responder</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="help" href="/help/">
+</head>
+<body>
+  <nav id="app-nav" class="app-nav" aria-label="Admin navigation"></nav>
+  <main class="settings-shell help-shell">
+    <a class="text-link back-link" href="/help/">← Back to help center</a>
+    <article class="config-card guide-card">
+      <p class="eyebrow">Response selection</p>
+      <h1>Rules and rulepacks</h1>
+      <p>Rules let a particular request receive a more useful placeholder than the general default. They are evaluated from top to bottom, and the <strong>first match wins</strong>.</p>
+
+      <h2>Create a rule</h2>
+      <p>Open the <a class="text-link" href="/rules">rule builder</a> and work top to bottom:</p>
+      <ul class="guide-steps">
+        <li><strong>Add rule</strong> opens the editor. Give the rule a <strong>Name</strong> — a short label shown in the rule list and the preview.</li>
+        <li><strong>Add at least one matcher.</strong> A rule with no matcher is rejected, and every matcher you fill in must match the request (logical AND).</li>
+        <li><strong>Choose the response:</strong> an <em>Embedded asset</em> (a built-in, media-safe body whose content type is set for you) or a <em>Custom body</em> with your own text and <code>Content-Type</code>.</li>
+        <li>Optionally set a <strong>Status</strong>, a <strong>Delay</strong>, and <strong>extra response headers</strong>.</li>
+        <li><strong>Apply rule</strong> adds it to the list. Drag a rule's handle to reorder — position decides precedence, because the first match wins.</li>
+        <li><strong>Save rules</strong> writes the change and live-reloads the responder; no restart is needed.</li>
+        <li>Run the <strong>Live preview</strong> with a sample host, path, method, destination, and <code>Accept</code> to see which rule wins (or the generic fallback) and the exact status, content type, delay, and body. Preview reflects <em>saved</em> rules, so save first.</li>
+      </ul>
+
+      <h2>Match fields</h2>
+      <p>Fill only the matchers you need; each one you set must match, and a rule needs at least one. Your own rules always run before rulepack rules.</p>
+      <ul class="guide-steps">
+        <li><strong>Method</strong> — exact HTTP method (GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS), or leave as <em>Any</em>.</li>
+        <li><strong>Host</strong> — exact hostname with no scheme or path, case-insensitive. Prefer this over a glob when you can.</li>
+        <li><strong>Host glob</strong> — shell-style hostname pattern such as <code>*.example.com</code>.</li>
+        <li><strong>Path glob</strong> — shell-style URL-path pattern such as <code>/ads/*</code>; the query string is never matched.</li>
+        <li><strong>Path regular expression</strong> — a Go regular expression matched against the URL path, such as <code>^/ad(s|server)/</code>.</li>
+        <li><strong>Sec-Fetch-Dest</strong> — the browser request destination, such as <code>script</code>, <code>image</code>, <code>style</code>, or <code>iframe</code>.</li>
+        <li><strong>Accept contains</strong> — case-insensitive text that must appear in the request <code>Accept</code> header.</li>
+        <li><strong>Query matchers</strong> — a parameter name plus an optional exact value; an empty value matches when the key is merely present.</li>
+        <li><strong>Request header matchers</strong> — a header name (case-insensitive) plus an exact value.</li>
+      </ul>
+
+      <h2>Response fields</h2>
+      <p>A matched rule overrides only the response parts you set; anything left blank falls back to the generic selection.</p>
+      <ul class="guide-steps">
+        <li><strong>Embedded asset</strong> — one built-in body: <code>transparent-gif</code>, <code>transparent-png</code>, <code>transparent-svg</code>, <code>empty-js</code>, <code>empty-css</code>, <code>empty-json</code>, <code>blank-html</code>, <code>empty-text</code>, <code>silent-wav</code>, or <code>minimal-mp4</code>. Its content type is set automatically.</li>
+        <li><strong>Custom body</strong> — your own literal text plus an optional <code>Content-Type</code> (left empty, a type is inferred from the request). A rule uses either an embedded asset or a custom body, never both.</li>
+        <li><strong>Status</strong> — an HTTP status from <code>100</code> through <code>599</code>, or <code>0</code> to keep the configured default.</li>
+        <li><strong>Delay</strong> — an artificial wait of <code>0</code> through <code>10000</code> ms before responding.</li>
+        <li><strong>Extra response headers</strong> — added after the standard defaults. <code>Set-Cookie</code> is always dropped and bodies are stripped for <code>204</code>/<code>304</code>; avoid overriding <code>Content-Length</code> or the security headers.</li>
+      </ul>
+      <p>For base64 or file-backed bodies, edit the raw YAML under <a class="text-link" href="/config">Configuration</a>: <code>body_base64</code> decodes a binary body and <code>body_file</code> loads a file (confined to the config directory, 1 MiB maximum) at each save or reload.</p>
+
+      <h2>Rulepacks</h2>
+      <p>A rulepack is a built-in, versioned collection of rules for a known script or ad network. Each pack only rewrites specific script URLs to a harmless stub and never fetches anything at runtime. Your own rules always evaluate before rulepack rules, so a user rule can override a pack; within each ordered group, first match still wins. Enable or inspect packs on the <a class="text-link" href="/rulepacks">Rulepacks page</a>.</p>
+
+      <p>Enabling the <code>recommended</code> pack turns on these five high-confidence packs for the most common ad and tracking networks, each matched only on the vendor's own hostnames:</p>
+      <ul class="guide-steps">
+        <li><strong>Google AdSense</strong> — neutralizes the AdSense display-ad scripts (<code>adsbygoogle.js</code>, <code>show_ads</code>) on <code>pagead2.googlesyndication.com</code> with a no-op stub.</li>
+        <li><strong>Google Publisher Tag</strong> — replaces GPT (<code>gpt.js</code>) on <code>securepubads.g.doubleclick.net</code> and <code>www.googletagservices.com</code> with an API-compatible stub.</li>
+        <li><strong>Google Analytics</strong> — neutralizes the Analytics and Tag Manager loaders (<code>analytics.js</code>, <code>ga.js</code>, <code>gtag/js</code>, <code>gtm.js</code>) on <code>google-analytics.com</code> and <code>googletagmanager.com</code>.</li>
+        <li><strong>Meta Pixel</strong> — neutralizes the Pixel loader and signal configuration (<code>fbevents.js</code>, <code>signals/config</code>) on <code>connect.facebook.net</code>.</li>
+        <li><strong>Amazon TAM</strong> — neutralizes the Amazon Publisher Services loader (<code>apstag.js</code>) on <code>c.amazon-adsystem.com</code>.</li>
+      </ul>
+
+      <p>These packs are not part of <code>recommended</code>; enable them individually when you need them:</p>
+      <ul class="guide-steps">
+        <li><strong>Consent Management Platforms</strong> — neutralizes the OneTrust consent loaders (<code>otSDKStub.js</code>, <code>otBannerSdk.js</code>) on <code>cdn.cookielaw.org</code>.</li>
+        <li><strong>Prebid</strong> — neutralizes Prebid scripts (<code>prebid*.js</code>). Matched on <strong>any host</strong> because Prebid is frequently served first-party, so it is broad and may over-match.</li>
+        <li><strong>Anti-Adblock Detectors</strong> — neutralizes common detection scripts (<code>fuckadblock*.js</code>, <code>blockadblock*.js</code>). Matched on <strong>any host</strong> and best-effort by nature.</li>
+      </ul>
+
+      <p class="private-key-note">A matching rule can imitate a small response shape, not a complete vendor service. Read <a class="text-link" href="/help/adblock-limits">Adblock-defeat explained + honest limits</a> before building site-specific expectations.</p>
+    </article>
+  </main>
+  <script type="module" src="/assets/nav.js"></script>
+</body>
+</html>
