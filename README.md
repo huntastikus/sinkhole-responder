@@ -702,11 +702,28 @@ Metric families are:
 | `sinkhole_build_info{version}` | gauge | Build/version identity with constant value `1`. |
 
 Application and access logs are structured JSON on standard output. Access
-logs include normalized host, path, matched rule when any, response kind,
+logs include method, normalized host, path, matched rule when any, response kind,
 status, duration, and client address. Query strings are **not logged by
 default** (`logging.log_query: false`). Client addresses are anonymized by
 default to IPv4 `/24` or IPv6 `/48`. Set `logging.access_log: false` to disable
 access logs entirely.
+
+POST body logging is also **disabled by default**. When
+`logging.log_post_body: true`, the responder records up to
+`logging.post_body_log_max_bytes` bytes (default `4096`, maximum `65536`) from
+UTF-8 text, JSON, and URL-encoded form bodies. Common password, secret, token,
+session, cookie, credential, and API-key fields in JSON/forms are replaced with
+`[REDACTED]`. Multipart, compressed/encoded, binary, invalid JSON/form, and
+non-UTF-8 bodies are omitted; long text/form bodies are marked as truncated.
+Captured records use `post_body`; `post_body_redacted` and
+`post_body_truncated` describe processing, while `post_body_omitted` explains
+why an unsafe or unreadable body was not captured.
+
+> **Sensitive-data warning:** body redaction is best-effort and cannot identify
+> every secret or personal value, especially in free-form text. Captured bodies
+> are written to process logs and retained in the admin UI's in-memory log ring.
+> Enable this only temporarily for troubleshooting, restrict log access and
+> retention, and disable it immediately afterward.
 
 ## Configuration reference
 
@@ -754,6 +771,8 @@ startup and reload. Boolean values must be exactly `true` or `false`.
 | `logging` | `level` | `"info"` | `SINKHOLE_LOG_LEVEL`; `debug`, `info`, `warn`, or `error` |
 | `logging` | `access_log` | `true` | `SINKHOLE_ACCESS_LOG` |
 | `logging` | `log_query` | `false` | `SINKHOLE_LOG_QUERY`; enabling may expose tokens |
+| `logging` | `log_post_body` | `false` | `SINKHOLE_LOG_POST_BODY`; opt-in POST body capture; may expose sensitive data |
+| `logging` | `post_body_log_max_bytes` | `4096` | `SINKHOLE_POST_BODY_LOG_MAX_BYTES`; capture cap from `1` through `65536` |
 | `logging` | `anonymize_client` | `true` | `SINKHOLE_ANONYMIZE_CLIENT` |
 | `jsonp` | `enabled` | `false` | `SINKHOLE_JSONP_ENABLED` |
 | `jsonp` | `param` | `"callback"` | `SINKHOLE_JSONP_PARAM`; non-empty when enabled |
@@ -764,7 +783,7 @@ Admin authentication has two additional optional startup-only inputs:
 are mutually exclusive and intentionally are not stored in configuration YAML.
 
 Send `SIGHUP` to reload the config. Rules, defaults, JSONP, all logging settings
-(`level`, `access_log`, `log_query`, and `anonymize_client`), and the admin
+(`level`, `access_log`, query/body capture, and `anonymize_client`), and the admin
 session and login-rate tuning take effect immediately. Public listener addresses,
 TLS, management settings, timeouts, body/header limits, rate limiting, the admin
 listener and TLS, and the state directory take effect only after a restart. When

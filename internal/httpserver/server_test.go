@@ -296,6 +296,7 @@ func TestAccessLogFieldsAndQueryPrivacy(t *testing.T) {
 
 	entry := decodeLog(t, output.Bytes())
 	for key, want := range map[string]any{
+		"method": "GET",
 		"host":   "example.test",
 		"path":   "/x.js",
 		"kind":   "script",
@@ -311,6 +312,115 @@ func TestAccessLogFieldsAndQueryPrivacy(t *testing.T) {
 	}
 	if _, ok := entry["query"]; ok || strings.Contains(output.String(), "token") || strings.Contains(output.String(), "secret") {
 		t.Fatalf("private query leaked into log: %s", output.String())
+	}
+}
+
+func TestPOSTBodyLoggingIsOptIn(t *testing.T) {
+	var output bytes.Buffer
+	cfg := testConfig()
+	request := httptest.NewRequest(http.MethodPost, "http://example.test/collect", strings.NewReader(`{"password":"not-for-logs"}`))
+	request.Header.Set("Content-Type", "application/json")
+	New(cfg, nil, slog.New(slog.NewJSONHandler(&output, nil)), nil).Handler().ServeHTTP(httptest.NewRecorder(), request)
+
+	entry := decodeLog(t, output.Bytes())
+	if entry["method"] != http.MethodPost {
+		t.Errorf("method = %#v, want POST", entry["method"])
+	}
+	if _, ok := entry["post_body"]; ok || strings.Contains(output.String(), "not-for-logs") {
+		t.Fatalf("disabled POST body logging leaked content: %s", output.String())
+	}
+}
+
+func TestPOSTBodyLoggingRedactsStructuredSecrets(t *testing.T) {
+	tests := []struct {
+		name        string
+		contentType string
+		body        string
+		want        string
+		secrets     []string
+	}{
+		{
+			name:        "JSON",
+			contentType: "application/json",
+			body:        `{"email":"person@example.test","password":"hidden","nested":{"accessToken":"bearer","auth":"private"}}`,
+			want:        `{"email":"person@example.test","nested":{"accessToken":"[REDACTED]","auth":"[REDACTED]"},"password":"[REDACTED]"}`,
+			secrets:     []string{"hidden", "bearer", "private"},
+		},
+		{
+			name:        "form",
+			contentType: "application/x-www-form-urlencoded",
+			body:        "email=person%40example.test&api_key=hidden&session_id=bearer",
+			want:        "api_key=%5BREDACTED%5D&email=person%40example.test&session_id=%5BREDACTED%5D",
+			secrets:     []string{"hidden", "bearer"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var output bytes.Buffer
+			cfg := testConfig()
+			cfg.Logging.LogPostBody = true
+			cfg.Logging.PostBodyLogMaxBytes = config.DefaultPostBodyLogMaxBytes
+			request := httptest.NewRequest(http.MethodPost, "http://example.test/collect", strings.NewReader(test.body))
+			request.Header.Set("Content-Type", test.contentType)
+			New(cfg, nil, slog.New(slog.NewJSONHandler(&output, nil)), nil).Handler().ServeHTTP(httptest.NewRecorder(), request)
+
+			entry := decodeLog(t, output.Bytes())
+			if entry["post_body"] != test.want || entry["post_body_redacted"] != true {
+				t.Errorf("POST body fields = %#v, redacted %#v", entry["post_body"], entry["post_body_redacted"])
+			}
+			for _, secret := range test.secrets {
+				if strings.Contains(output.String(), secret) {
+					t.Errorf("log leaked %q: %s", secret, output.String())
+				}
+			}
+		})
+	}
+}
+
+func TestPOSTBodyLoggingCapsTextAndOmitsUnsafeFormats(t *testing.T) {
+	tests := []struct {
+		name          string
+		contentType   string
+		contentEncode string
+		body          string
+		limit         int64
+		wantBody      string
+		wantOmitted   string
+		wantTruncated bool
+	}{
+		{name: "bounded text", contentType: "text/plain", body: "abcdef", limit: 5, wantBody: "abcde", wantTruncated: true},
+		{name: "multipart", contentType: "multipart/form-data; boundary=test", body: "multipart-secret", wantOmitted: "multipart body"},
+		{name: "binary", contentType: "application/octet-stream", body: "binary-secret", wantOmitted: "unsupported content type"},
+		{name: "encoded", contentType: "application/json", contentEncode: "gzip", body: "encoded-secret", wantOmitted: "encoded body"},
+		{name: "invalid JSON", contentType: "application/json", body: "invalid-secret", wantOmitted: "invalid JSON body"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var output bytes.Buffer
+			cfg := testConfig()
+			cfg.Logging.LogPostBody = true
+			cfg.Logging.PostBodyLogMaxBytes = test.limit
+			if cfg.Logging.PostBodyLogMaxBytes == 0 {
+				cfg.Logging.PostBodyLogMaxBytes = config.DefaultPostBodyLogMaxBytes
+			}
+			request := httptest.NewRequest(http.MethodPost, "http://example.test/collect", strings.NewReader(test.body))
+			request.Header.Set("Content-Type", test.contentType)
+			if test.contentEncode != "" {
+				request.Header.Set("Content-Encoding", test.contentEncode)
+			}
+			New(cfg, nil, slog.New(slog.NewJSONHandler(&output, nil)), nil).Handler().ServeHTTP(httptest.NewRecorder(), request)
+
+			entry := decodeLog(t, output.Bytes())
+			if test.wantOmitted != "" {
+				if entry["post_body_omitted"] != test.wantOmitted || strings.Contains(output.String(), test.body) {
+					t.Errorf("omitted POST body log = %s", output.String())
+				}
+				return
+			}
+			if entry["post_body"] != test.wantBody || entry["post_body_truncated"] != test.wantTruncated {
+				t.Errorf("bounded POST body fields = %#v, truncated %#v", entry["post_body"], entry["post_body_truncated"])
+			}
+		})
 	}
 }
 

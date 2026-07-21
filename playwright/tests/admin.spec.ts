@@ -191,6 +191,30 @@ test.describe.serial("admin GUI", () => {
     await expect(recommended).toBeChecked();
   });
 
+  test("POST body logging is opt-in and displays its sensitive-data warning", async () => {
+    await page.goto(`${adminBaseURL}/config`);
+
+    await expect(page.getByText("Sensitive-data risk", { exact: true })).toBeVisible();
+    await expect(page.getByText(/Redaction is best-effort/)).toBeVisible();
+
+    const enabled = page.getByLabel("Log POST bodies");
+    const limit = page.getByLabel("POST body log bytes");
+    await expect(enabled).not.toBeChecked();
+    await expect(limit).toHaveValue("4096");
+
+    await enabled.check();
+    await limit.fill("2048");
+    const saveResponse = page.waitForResponse(
+      (response) => response.url() === `${adminBaseURL}/api/config` && response.request().method() === "PUT",
+    );
+    await page.getByRole("button", { name: "Save configuration" }).click();
+    expect((await saveResponse).status()).toBe(200);
+
+    await page.reload();
+    await expect(enabled).toBeChecked();
+    await expect(limit).toHaveValue("2048");
+  });
+
   test("certificate manager generates a CA with fingerprint and download link", async () => {
     await page.goto(`${adminBaseURL}/tls`);
     await page.getByRole("button", { name: "Generate CA", exact: true }).click();

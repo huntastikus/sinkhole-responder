@@ -101,6 +101,13 @@ logging:
   access_log: true
   # Include queries in logs. Default: false. Env: SINKHOLE_LOG_QUERY.
   log_query: false
+  # DANGER: opt-in POST body logging can capture passwords, tokens, and personal data.
+  # JSON/form redaction is best-effort; multipart, encoded, and binary bodies are omitted.
+  # Default: false. Env: SINKHOLE_LOG_POST_BODY.
+  log_post_body: false
+  # Maximum POST body bytes retained in a log entry (1-65536). Default: 4096.
+  # Env: SINKHOLE_POST_BODY_LOG_MAX_BYTES.
+  post_body_log_max_bytes: 4096
   # Anonymize client addresses. Default: true. Env: SINKHOLE_ANONYMIZE_CLIENT.
   anonymize_client: true
 

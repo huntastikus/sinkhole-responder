@@ -342,6 +342,12 @@ function validateForm() {
     invalidate(loginBurst, "Use a burst of at least one when login limiting is enabled.");
   }
 
+  const postBodyLogMax = document.getElementById("logging-post-body-max");
+  const postBodyLogMaxValue = Number(postBodyLogMax.value);
+  if (!Number.isInteger(postBodyLogMaxValue) || postBodyLogMaxValue < 1 || postBodyLogMaxValue > 65536) {
+    invalidate(postBodyLogMax, "Enter a byte limit from 1 through 65536.");
+  }
+
   const adminCert = document.getElementById("admin-tls-cert");
   const adminKey = document.getElementById("admin-tls-key");
   if ((adminCert.value.trim() === "") !== (adminKey.value.trim() === "")) {

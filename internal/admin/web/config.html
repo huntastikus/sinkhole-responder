@@ -186,6 +186,10 @@
 
       <fieldset class="config-card">
         <legend>Logging</legend>
+        <div class="danger-callout" role="note">
+          <strong>Sensitive-data risk</strong>
+          <p>POST bodies can contain passwords, tokens, personal information, and other secrets. Redaction is best-effort and cannot guarantee that every sensitive value is removed. Enable body logging only temporarily, protect all log outputs, and disable it after troubleshooting.</p>
+        </div>
         <div class="field-grid">
           <div class="field">
             <label for="logging-level">Level</label>
@@ -208,6 +212,18 @@
             <input id="logging-query" type="checkbox" data-config-path="logging.log_query" data-value-type="boolean">
             <label for="logging-query">Log query strings</label>
             <small class="field-help">Include URL query strings in access-log records.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field field-toggle">
+            <input id="logging-post-body" type="checkbox" data-config-path="logging.log_post_body" data-value-type="boolean">
+            <label for="logging-post-body">Log POST bodies</label>
+            <small class="field-help">Opt in to bounded text, JSON, and form-body logging. Multipart, encoded, and binary bodies are excluded.</small>
+            <small class="field-error" aria-live="polite"></small>
+          </div>
+          <div class="field">
+            <label for="logging-post-body-max">POST body log bytes</label>
+            <input id="logging-post-body-max" type="number" min="1" max="65536" step="1" data-config-path="logging.post_body_log_max_bytes" data-value-type="number">
+            <small class="field-help">Maximum bytes retained per POST for logging, from 1 through 65536.</small>
             <small class="field-error" aria-live="polite"></small>
           </div>
           <div class="field field-toggle">

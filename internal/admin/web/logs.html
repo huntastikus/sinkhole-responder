@@ -16,11 +16,16 @@
       <div>
         <p class="eyebrow">Sinkhole Responder</p>
         <h1>Live logs</h1>
-        <p class="settings-intro">Recent in-memory records, newest first. Query values are redacted before records enter this view.</p>
+        <p class="settings-intro">Recent in-memory records, newest first. Opt-in POST body records may contain sensitive data even after best-effort redaction.</p>
       </div>
     </header>
 
     <aside id="logs-banner" class="banner config-banner" role="alert" hidden></aside>
+
+    <div class="danger-callout" role="note">
+      <strong>Sensitive-data risk</strong>
+      <p>When POST body logging is enabled, captured content appears here and in process logs. Treat log access as privileged and disable body logging after troubleshooting.</p>
+    </div>
 
     <section class="config-card" aria-labelledby="logs-table-title">
       <div class="logs-toolbar">

@@ -107,11 +107,18 @@ type LimitsConfig struct {
 }
 
 type LoggingConfig struct {
-	Level           string `yaml:"level"`
-	AccessLog       *bool  `yaml:"access_log"`
-	LogQuery        bool   `yaml:"log_query"`
-	AnonymizeClient *bool  `yaml:"anonymize_client"`
+	Level               string `yaml:"level"`
+	AccessLog           *bool  `yaml:"access_log"`
+	LogQuery            bool   `yaml:"log_query"`
+	LogPostBody         bool   `yaml:"log_post_body"`
+	PostBodyLogMaxBytes int64  `yaml:"post_body_log_max_bytes"`
+	AnonymizeClient     *bool  `yaml:"anonymize_client"`
 }
+
+const (
+	DefaultPostBodyLogMaxBytes int64 = 4 << 10
+	MaxPostBodyLogBytes        int64 = 64 << 10
+)
 
 type JSONPConfig struct {
 	Enabled bool   `yaml:"enabled"`
@@ -259,6 +266,10 @@ func (c *Config) Validate() error {
 	default:
 		return fmt.Errorf("logging.level must be debug, info, warn, or error, got %q", c.Logging.Level)
 	}
+	if c.Logging.PostBodyLogMaxBytes < 0 || c.Logging.PostBodyLogMaxBytes > MaxPostBodyLogBytes ||
+		c.Logging.LogPostBody && c.Logging.PostBodyLogMaxBytes < 1 {
+		return fmt.Errorf("logging.post_body_log_max_bytes must be between 1 and %d, got %d", MaxPostBodyLogBytes, c.Logging.PostBodyLogMaxBytes)
+	}
 
 	if c.TLS.Mode == "static" {
 		if len(c.TLS.Static.Certs) == 0 {
@@ -391,9 +402,10 @@ func defaultConfig() *Config {
 			RateBurst:      50,
 		},
 		Logging: LoggingConfig{
-			Level:           "info",
-			AccessLog:       &accessLog,
-			AnonymizeClient: &anonymizeClient,
+			Level:               "info",
+			AccessLog:           &accessLog,
+			PostBodyLogMaxBytes: DefaultPostBodyLogMaxBytes,
+			AnonymizeClient:     &anonymizeClient,
 		},
 		JSONP:    JSONPConfig{Param: "callback"},
 		StateDir: "",
@@ -658,6 +670,12 @@ func applyEnv(cfg *Config) error {
 		return err
 	}
 	if err := applyBoolEnv("SINKHOLE_LOG_QUERY", func(value bool) { cfg.Logging.LogQuery = value }); err != nil {
+		return err
+	}
+	if err := applyBoolEnv("SINKHOLE_LOG_POST_BODY", func(value bool) { cfg.Logging.LogPostBody = value }); err != nil {
+		return err
+	}
+	if err := applyInt64Env("SINKHOLE_POST_BODY_LOG_MAX_BYTES", func(value int64) { cfg.Logging.PostBodyLogMaxBytes = value }); err != nil {
 		return err
 	}
 	if err := applyBoolEnv("SINKHOLE_ANONYMIZE_CLIENT", func(value bool) { cfg.Logging.AnonymizeClient = &value }); err != nil {

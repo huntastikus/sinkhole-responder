@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,10 +21,11 @@ const (
 )
 
 type requestInfo struct {
-	state *serverState
-	start time.Time
-	kind  string
-	rule  string
+	state    *serverState
+	start    time.Time
+	kind     string
+	rule     string
+	postBody *postBodyLog
 }
 
 type statusRecorder struct {
@@ -110,7 +112,19 @@ func bodyLimitMiddleware(maxBytes int64, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 		if methodHasBody(r.Method) {
-			_, err := io.Copy(io.Discard, r.Body)
+			destination := io.Writer(io.Discard)
+			var capture *boundedBodyCapture
+			if strings.EqualFold(r.Method, http.MethodPost) {
+				recorder := w.(*statusRecorder)
+				capture, recorder.info.postBody = preparePostBodyCapture(recorder.info.state.cfg, r)
+				if capture != nil {
+					destination = capture
+				}
+			}
+			_, err := io.Copy(destination, r.Body)
+			if capture != nil {
+				w.(*statusRecorder).info.postBody = capture.finish()
+			}
 			if err != nil {
 				var tooLarge *http.MaxBytesError
 				if errors.As(err, &tooLarge) {

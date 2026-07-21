@@ -51,6 +51,8 @@ var overrideEnvironment = []string{
 	"SINKHOLE_LOG_LEVEL",
 	"SINKHOLE_ACCESS_LOG",
 	"SINKHOLE_LOG_QUERY",
+	"SINKHOLE_LOG_POST_BODY",
+	"SINKHOLE_POST_BODY_LOG_MAX_BYTES",
 	"SINKHOLE_ANONYMIZE_CLIENT",
 	"SINKHOLE_JSONP_ENABLED",
 	"SINKHOLE_JSONP_PARAM",
@@ -100,9 +102,10 @@ func TestLoadEmptyFileUsesDefaults(t *testing.T) {
 			RateBurst:      50,
 		},
 		Logging: LoggingConfig{
-			Level:           "info",
-			AccessLog:       &accessLog,
-			AnonymizeClient: &anonymizeClient,
+			Level:               "info",
+			AccessLog:           &accessLog,
+			PostBodyLogMaxBytes: DefaultPostBodyLogMaxBytes,
+			AnonymizeClient:     &anonymizeClient,
 		},
 		JSONP: JSONPConfig{Param: "callback"},
 		Admin: AdminConfig{
@@ -298,6 +301,8 @@ func TestEnvironmentOverridesYAML(t *testing.T) {
 	t.Setenv("SINKHOLE_LOG_LEVEL", "debug")
 	t.Setenv("SINKHOLE_ACCESS_LOG", "false")
 	t.Setenv("SINKHOLE_LOG_QUERY", "true")
+	t.Setenv("SINKHOLE_LOG_POST_BODY", "true")
+	t.Setenv("SINKHOLE_POST_BODY_LOG_MAX_BYTES", "2048")
 	t.Setenv("SINKHOLE_ANONYMIZE_CLIENT", "false")
 	t.Setenv("SINKHOLE_JSONP_ENABLED", "true")
 	t.Setenv("SINKHOLE_JSONP_PARAM", "cb")
@@ -345,7 +350,7 @@ logging:
 	if cfg.Limits.MaxHeaderBytes != 8192 || cfg.Limits.MaxBodyBytes != 32768 || cfg.Limits.ReadTimeout != 4*time.Second || cfg.Limits.WriteTimeout != 5*time.Second || cfg.Limits.IdleTimeout != 30*time.Second || cfg.Limits.RatePerIP != 12.5 || cfg.Limits.RateBurst != 25 {
 		t.Errorf("Limits = %#v", cfg.Limits)
 	}
-	if cfg.Logging.Level != "debug" || !cfg.Logging.LogQuery || cfg.Logging.AnonymizeClient == nil || *cfg.Logging.AnonymizeClient {
+	if cfg.Logging.Level != "debug" || !cfg.Logging.LogQuery || !cfg.Logging.LogPostBody || cfg.Logging.PostBodyLogMaxBytes != 2048 || cfg.Logging.AnonymizeClient == nil || *cfg.Logging.AnonymizeClient {
 		t.Errorf("Logging = %#v", cfg.Logging)
 	}
 	if !cfg.JSONP.Enabled || cfg.JSONP.Param != "cb" {
@@ -428,6 +433,7 @@ func TestEnvironmentRejectsInvalidScalarValues(t *testing.T) {
 		{name: "64-bit integer", env: "SINKHOLE_MAX_BODY_BYTES", value: "large"},
 		{name: "floating point", env: "SINKHOLE_RATE_PER_IP", value: "fast"},
 		{name: "duration", env: "SINKHOLE_READ_TIMEOUT", value: "soon"},
+		{name: "POST body log limit", env: "SINKHOLE_POST_BODY_LOG_MAX_BYTES", value: "large"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			clearOverrides(t)
@@ -450,6 +456,8 @@ func TestLoadRejectsInvalidConfiguration(t *testing.T) {
 		{name: "invalid TLS mode", yaml: "tls:\n  mode: tls\n", wantErr: "tls.mode"},
 		{name: "invalid media response", yaml: "defaults:\n  media_response: foo\n", wantErr: "defaults.media_response"},
 		{name: "invalid log level", yaml: "logging:\n  level: trace\n", wantErr: "logging.level"},
+		{name: "enabled POST body log without capture bytes", yaml: "logging:\n  log_post_body: true\n  post_body_log_max_bytes: 0\n", wantErr: "logging.post_body_log_max_bytes"},
+		{name: "POST body log cap too large", yaml: "logging:\n  post_body_log_max_bytes: 65537\n", wantErr: "logging.post_body_log_max_bytes"},
 		{name: "HTTPS with TLS disabled", yaml: "listen:\n  https: [\":8443\"]\ntls:\n  mode: disabled\n", wantErr: "listen.https"},
 		{name: "static TLS without certs", yaml: "tls:\n  mode: static\nlisten:\n  https: [\":8443\"]\n", wantErr: "tls.static.certs"},
 		{name: "local CA zero cache", yaml: localCATestYAML("    cache_size: 0\n"), wantErr: "cache_size"},

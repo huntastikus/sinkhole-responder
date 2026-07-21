@@ -147,3 +147,42 @@ func TestLoginIncludesVersionPlaceholder(t *testing.T) {
 		t.Error("login page is missing the build version placeholder")
 	}
 }
+
+func TestPostBodyLoggingUIWarnsAboutSensitiveData(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		name string
+		want []string
+	}{
+		{
+			name: "config.html",
+			want: []string{
+				`data-config-path="logging.log_post_body"`,
+				`data-config-path="logging.post_body_log_max_bytes"`,
+				"Sensitive-data risk",
+				"Redaction is best-effort",
+			},
+		},
+		{
+			name: "logs.html",
+			want: []string{
+				"may contain sensitive data",
+				"disable body logging after troubleshooting",
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			content, err := fs.ReadFile(embeddedWeb, "web/"+test.name)
+			if err != nil {
+				t.Fatalf("read embedded page: %v", err)
+			}
+			page := string(content)
+			for _, want := range test.want {
+				if !strings.Contains(page, want) {
+					t.Errorf("page is missing %q", want)
+				}
+			}
+		})
+	}
+}
