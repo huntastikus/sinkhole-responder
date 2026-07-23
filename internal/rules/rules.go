@@ -88,13 +88,15 @@ func compileRule(rule Rule, configDir string) (compiledRule, error) {
 			Headers:     responseHeaders,
 			Delay:       time.Duration(rule.Response.DelayMS) * time.Millisecond,
 		},
-		hostGlob:     rule.HostGlob,
-		pathGlob:     rule.PathGlob,
-		method:       strings.ToUpper(rule.Method),
-		secFetchDest: rule.SecFetchDest,
-		accept:       strings.ToLower(rule.Accept),
-		query:        maps.Clone(rule.Query),
-		headers:      compileHeaders(rule.Headers),
+		hostGlob:         rule.HostGlob,
+		hostGlobSegments: doublestarSegments(rule.HostGlob),
+		pathGlob:         rule.PathGlob,
+		pathGlobSegments: doublestarSegments(rule.PathGlob),
+		method:           strings.ToUpper(rule.Method),
+		secFetchDest:     rule.SecFetchDest,
+		accept:           strings.ToLower(rule.Accept),
+		query:            maps.Clone(rule.Query),
+		headers:          compileHeaders(rule.Headers),
 	}
 
 	if rule.Host != "" {

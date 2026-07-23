@@ -81,6 +81,26 @@ Never expose `9090` to an untrusted network.
 See [Deployment](deployment.md) for mount examples and
 [TLS and certificates](tls.md) for the trust model.
 
+## Read-only API token
+
+The Tools page can generate one `srt_` bearer token for automation. Its
+plaintext is shown once; only a SHA-256 hash is stored in
+`admin/api_token.json`. Rotating or revoking it invalidates the previous value
+immediately.
+
+The token authorizes only these admin API reads:
+
+- `GET /api/stats`;
+- `GET /api/stats/history`;
+- `GET /api/system/health`;
+- `GET /api/logs`.
+
+It cannot change configuration, restart the process, or call other admin
+routes. Protect the plaintext like a password and use HTTPS when sending it
+over a network. Note that `GET /api/logs` exposes recent log records to the
+token holder — if you enable request body or query logging (see "Logging and
+privacy" below), that captured content is readable with the token too.
+
 ## Logging and privacy
 
 Query logging and request-body capture are off by default. Client IP addresses

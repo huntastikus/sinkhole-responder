@@ -73,6 +73,7 @@ type Server struct {
 	logger          *slog.Logger
 	displayVersion  string
 	sessionKey      []byte
+	sessionKeyMu    sync.RWMutex
 	credentialFound atomic.Bool
 	loginLimitersMu sync.Mutex
 	loginLimiters   map[string]*rate.Limiter
@@ -154,6 +155,10 @@ func New(deps Deps) (*Server, error) {
 	server.router.HandleFunc("GET /login", server.handleLoginPage)
 	server.router.HandleFunc("POST /login", server.handleLogin)
 	server.router.HandleFunc("POST /logout", server.handleLogout)
+	server.router.HandleFunc("POST /api/admin/password", server.handlePasswordChange)
+	server.router.HandleFunc("GET /api/admin/token", server.handleAPITokenStatus)
+	server.router.HandleFunc("POST /api/admin/token", server.handleAPITokenGenerate)
+	server.router.HandleFunc("DELETE /api/admin/token", server.handleAPITokenDelete)
 	server.router.HandleFunc("GET /setup", server.handleSetupPage)
 	server.router.HandleFunc("POST /setup", server.handleSetup)
 	server.router.HandleFunc("GET /api/stats", server.handleStats)
@@ -168,12 +173,16 @@ func New(deps Deps) (*Server, error) {
 	server.router.HandleFunc("PUT /api/config/raw", server.handleRawConfigWrite)
 	server.router.HandleFunc("GET /api/config/export", server.handleConfigExport)
 	server.router.HandleFunc("POST /api/config/import", server.handleConfigImport)
+	server.router.HandleFunc("GET /api/config/backups", server.handleBackupsList)
+	server.router.HandleFunc("POST /api/config/backups/restore", server.handleBackupRestore)
+	server.router.HandleFunc("GET /api/backup/archive", server.handleBackupArchive)
 	server.router.HandleFunc("GET /api/rules", server.handleRules)
 	server.router.HandleFunc("PUT /api/rules", server.handleRulesWrite)
 	server.router.HandleFunc("POST /api/rules/reorder", server.handleRulesReorder)
 	server.router.HandleFunc("POST /api/rules/preview", server.handleRulesPreview)
 	server.router.HandleFunc("GET /api/assets", server.handleAssets)
 	server.router.HandleFunc("GET /api/rulepacks", server.handleRulepacks)
+	server.router.HandleFunc("GET /api/rulepacks/preview", server.handleRulepackPreview)
 	server.router.HandleFunc("POST /api/rulepacks/toggle", server.handleRulepackToggle)
 	server.router.HandleFunc("POST /api/tools/test-domain", server.handleTestDomain)
 	server.router.HandleFunc("GET /api/tools/agh-config", server.handleAGHConfig)
@@ -183,6 +192,23 @@ func New(deps Deps) (*Server, error) {
 	server.router.HandleFunc("POST /api/tls/mode", server.handleTLSMode)
 	server.router.HandleFunc("GET /api/ca/download", server.handleCADownload)
 	return server, nil
+}
+
+func (s *Server) currentSessionKey() []byte {
+	s.sessionKeyMu.RLock()
+	defer s.sessionKeyMu.RUnlock()
+	return append([]byte(nil), s.sessionKey...)
+}
+
+func (s *Server) reloadSessionKey() error {
+	key, err := LoadOrCreateSessionKey(s.deps.State)
+	if err != nil {
+		return err
+	}
+	s.sessionKeyMu.Lock()
+	s.sessionKey = key
+	s.sessionKeyMu.Unlock()
+	return nil
 }
 
 // Handler returns the admin router wrapped in recovery, security, and cache middleware.

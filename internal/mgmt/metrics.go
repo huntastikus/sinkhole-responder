@@ -39,6 +39,7 @@ type Snapshot struct {
 	StartedAt        time.Time
 	RequestsByKind   map[string]uint64
 	RequestsByStatus map[int]uint64
+	RequestsByRule   map[string]uint64
 	RequestsTotal    uint64
 	DurationBuckets  []BucketCount
 	DurationSum      float64
@@ -56,6 +57,7 @@ type Metrics struct {
 
 	requestsMu sync.RWMutex
 	requests   map[requestKey]uint64
+	rules      map[string]uint64
 
 	durationBuckets [len(durationLabels)]uint64
 	durationCount   uint64
@@ -74,12 +76,14 @@ func newMetrics(version string, now func() time.Time) *Metrics {
 		version:   version,
 		startedAt: now(),
 		requests:  make(map[requestKey]uint64),
+		rules:     make(map[string]uint64),
 	}
 	return metrics
 }
 
-// ObserveRequest records one completed sinkhole request.
-func (m *Metrics) ObserveRequest(kind string, status int, d time.Duration) {
+// ObserveRequest records one completed sinkhole request. rule is the matched
+// rule name; empty when no rule matched.
+func (m *Metrics) ObserveRequest(kind, rule string, status int, d time.Duration) {
 	if m == nil {
 		return
 	}
@@ -95,6 +99,9 @@ func (m *Metrics) ObserveRequest(kind string, status int, d time.Duration) {
 	key := requestKey{kind: kind, status: status}
 	m.requestsMu.Lock()
 	m.requests[key]++
+	if rule != "" {
+		m.rules[rule]++
+	}
 	m.durationBuckets[bucket]++
 	m.durationCount++
 	m.durationNanos += d.Nanoseconds()
@@ -120,6 +127,7 @@ func (m *Metrics) Snapshot() Snapshot {
 	snapshot := Snapshot{
 		RequestsByKind:   make(map[string]uint64),
 		RequestsByStatus: make(map[int]uint64),
+		RequestsByRule:   make(map[string]uint64),
 		DurationBuckets:  make([]BucketCount, len(durationLabels)),
 		requests:         make(map[requestKey]uint64),
 	}
@@ -139,6 +147,9 @@ func (m *Metrics) Snapshot() Snapshot {
 		snapshot.RequestsByKind[key.kind] += value
 		snapshot.RequestsByStatus[key.status] += value
 		snapshot.RequestsTotal += value
+	}
+	for rule, value := range m.rules {
+		snapshot.RequestsByRule[rule] = value
 	}
 	var cumulative uint64
 	for i, label := range durationLabels {
@@ -179,6 +190,21 @@ func (m *Metrics) WritePrometheus(w io.Writer) {
 		output.WriteString(strconv.Itoa(key.status))
 		output.WriteString("\"} ")
 		output.WriteString(strconv.FormatUint(snapshot.requests[key], 10))
+		output.WriteByte('\n')
+	}
+
+	output.WriteString("# HELP sinkhole_rule_hits_total Requests matched per configured rule.\n")
+	output.WriteString("# TYPE sinkhole_rule_hits_total counter\n")
+	ruleNames := make([]string, 0, len(snapshot.RequestsByRule))
+	for name := range snapshot.RequestsByRule {
+		ruleNames = append(ruleNames, name)
+	}
+	sort.Strings(ruleNames)
+	for _, name := range ruleNames {
+		output.WriteString("sinkhole_rule_hits_total{rule=\"")
+		output.WriteString(escapeLabelValue(name))
+		output.WriteString("\"} ")
+		output.WriteString(strconv.FormatUint(snapshot.RequestsByRule[name], 10))
 		output.WriteByte('\n')
 	}
 

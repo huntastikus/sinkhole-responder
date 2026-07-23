@@ -256,6 +256,52 @@ func TestDisabledRateLimit(t *testing.T) {
 	}
 }
 
+func TestSwapConfigAppliesRateLimitsLive(t *testing.T) {
+	cfg := testConfig()
+	cfg.Limits.RatePerIP = 1
+	cfg.Limits.RateBurst = 1
+	server := New(cfg, nil, discardLogger(), nil)
+	request := func() int {
+		req := httptest.NewRequest(http.MethodGet, "http://example.test/x.js", nil)
+		req.RemoteAddr = "192.0.2.10:1234"
+		recorder := httptest.NewRecorder()
+		server.Handler().ServeHTTP(recorder, req)
+		return recorder.Code
+	}
+
+	if got := request(); got != http.StatusOK {
+		t.Fatalf("first request status = %d, want %d", got, http.StatusOK)
+	}
+	if got := request(); got != http.StatusTooManyRequests {
+		t.Fatalf("limited request status = %d, want %d", got, http.StatusTooManyRequests)
+	}
+
+	unchanged := testConfig()
+	unchanged.Limits.RatePerIP = 1
+	unchanged.Limits.RateBurst = 1
+	server.SwapConfig(unchanged, nil)
+	if got := request(); got != http.StatusTooManyRequests {
+		t.Fatalf("request after unchanged limit swap = %d, want %d", got, http.StatusTooManyRequests)
+	}
+
+	updated := testConfig()
+	updated.Limits.RatePerIP = 1000
+	updated.Limits.RateBurst = 1000
+	server.SwapConfig(updated, nil)
+	if got := request(); got != http.StatusOK {
+		t.Fatalf("request after increased limit = %d, want %d", got, http.StatusOK)
+	}
+
+	disabled := testConfig()
+	disabled.Limits.RatePerIP = 0
+	server.SwapConfig(disabled, nil)
+	for range 3 {
+		if got := request(); got != http.StatusOK {
+			t.Fatalf("request with limiting disabled = %d, want %d", got, http.StatusOK)
+		}
+	}
+}
+
 func TestRecoverMiddleware(t *testing.T) {
 	var logs bytes.Buffer
 	server := New(testConfig(), nil, slog.New(slog.NewJSONHandler(&logs, nil)), nil)

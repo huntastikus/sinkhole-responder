@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -57,7 +58,7 @@ func New(root string) (*Dir, error) {
 	}
 
 	d := &Dir{Root: filepath.Clean(absRoot)}
-	for _, rel := range []string{"admin", "tls", filepath.Join("tls", "uploaded")} {
+	for _, rel := range []string{"admin", "tls", filepath.Join("tls", "uploaded"), "metrics"} {
 		path, err := d.resolve(rel)
 		if err != nil {
 			return nil, err
@@ -287,6 +288,39 @@ func WriteFileAtomic(path string, data []byte, mode os.FileMode) error {
 type backup struct {
 	path   string
 	number int
+}
+
+// BackupInfo describes one numbered config backup.
+type BackupInfo struct {
+	Name    string
+	Number  int
+	ModTime time.Time
+	Size    int64
+}
+
+// ListBackups returns the numbered backups for configPath, oldest first.
+func ListBackups(configPath string) ([]BackupInfo, error) {
+	backups, err := numberedBackups(configPath)
+	if err != nil {
+		return nil, err
+	}
+	infos := make([]BackupInfo, 0, len(backups))
+	for _, backup := range backups {
+		info, err := os.Lstat(backup.path)
+		if err != nil {
+			return nil, fmt.Errorf("inspect backup %q: %w", backup.path, err)
+		}
+		if !info.Mode().IsRegular() {
+			return nil, fmt.Errorf("inspect backup %q: not a regular file", backup.path)
+		}
+		infos = append(infos, BackupInfo{
+			Name:    filepath.Base(backup.path),
+			Number:  backup.number,
+			ModTime: info.ModTime(),
+			Size:    info.Size(),
+		})
+	}
+	return infos, nil
 }
 
 func numberedBackups(configPath string) ([]backup, error) {

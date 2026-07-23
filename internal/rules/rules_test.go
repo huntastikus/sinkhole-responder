@@ -442,3 +442,80 @@ func hostName(host string) string {
 	}
 	return host
 }
+
+func TestGlobMatchDoublestar(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string
+		input   string
+		want    bool
+	}{
+		{"root level", "**/tag/js/gpt.js", "/tag/js/gpt.js", true},
+		{"one level deep", "**/tag/js/gpt.js", "/a/tag/js/gpt.js", true},
+		{"two levels deep", "**/tag/js/gpt.js", "/a/b/tag/js/gpt.js", true},
+		{"suffix mismatch", "**/tag/js/gpt.js", "/a/b/tag/js/other.js", false},
+		{"doublestar middle", "/assets/**/app.js", "/assets/v1/2024/app.js", true},
+		{"doublestar middle zero segments", "/assets/**/app.js", "/assets/app.js", true},
+		{"doublestar with glob segment", "**/gpt/*.js", "/x/y/gpt/pubads_impl.js", true},
+		{"doublestar with glob segment deep tail", "**/gpt/*.js", "/x/gpt/deeper/pubads.js", false},
+		{"bare doublestar", "**", "/anything/at/all", true},
+		{"no doublestar unchanged", "/ads/*", "/ads/pixel", true},
+		{"no doublestar still not recursive", "/ads/*", "/ads/a/pixel", false},
+		{"mid-segment stars are not special", "/a**b", "/axxb", true},
+		{"mid-segment stars do not recurse", "/a**b", "/a/x/b", false},
+		{"trailing doublestar", "/static/**", "/static/js/vendor/x.js", true},
+		{"trailing doublestar zero segments", "/static/**", "/static", true},
+		{"host glob doublestar", "**", "cdn.example.com", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := globMatch(tt.pattern, tt.input); got != tt.want {
+				t.Fatalf("globMatch(%q, %q) = %v, want %v", tt.pattern, tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCompileGlobValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string
+		wantErr bool
+	}{
+		{"valid doublestar", "**/tag/js/gpt.js", false},
+		{"bad plain pattern", "/ads/[", true},
+		// path.Match validates the pattern remainder even after a mismatch,
+		// so whole-pattern validation catches bad segments after **.
+		{"bad segment after doublestar", "**/[", true},
+		// A character class spanning "/" is valid for path.Match and must
+		// keep compiling (it can never match a path segment, but rejecting
+		// it would break configs that load today).
+		{"class spanning slash", "/api[/.]v1", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Compile([]Rule{{PathGlob: tt.pattern, Response: Response{Body: "x"}}}, t.TempDir())
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Compile(path_glob=%q) error = %v, wantErr %v", tt.pattern, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestCompileRejectsBadGlobAfterDoublestar(t *testing.T) {
+	_, err := Compile([]Rule{{PathGlob: "**/[", Response: Response{Body: "x"}}}, t.TempDir())
+	if err == nil {
+		t.Fatal("expected compile error for path_glob with bad segment after **")
+	}
+}
+
+func TestEngineMatchesDeepDoublestarPath(t *testing.T) {
+	engine, err := Compile([]Rule{{Name: "gpt", PathGlob: "**/tag/js/gpt.js", Response: Response{Body: "ok"}}}, t.TempDir())
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	request := httptest.NewRequest(http.MethodGet, "http://ads.test/pagead/managed/js/tag/js/gpt.js", nil)
+	if _, ok := engine.Match(request); !ok {
+		t.Fatal("deep path did not match **/tag/js/gpt.js")
+	}
+}

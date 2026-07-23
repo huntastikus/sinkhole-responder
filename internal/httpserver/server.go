@@ -40,8 +40,8 @@ type Server struct {
 }
 
 // New builds the public HTTP server. Listener addresses, timeouts, and request
-// limits are fixed until the server is restarted; SwapConfig updates only the
-// request-time rules, defaults, logging, and JSONP behavior.
+// size limits are fixed until the server is restarted; SwapConfig updates rate
+// limits and the other request-time behavior.
 func New(cfg *config.Config, eng *rules.Engine, logger *slog.Logger, m *mgmt.Metrics) *Server {
 	if cfg == nil {
 		cfg = &config.Config{}
@@ -81,12 +81,12 @@ func (s *Server) Addrs() []net.Addr {
 }
 
 // SwapConfig atomically replaces the rules and live request configuration.
-// Listen addresses, timeouts, header/body limits, and rate limits require a
-// restart to take effect.
+// Listen addresses, timeouts, and header/body limits require a restart.
 func (s *Server) SwapConfig(cfg *config.Config, eng *rules.Engine) {
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
+	s.limiters.updateLimits(cfg.Limits.RatePerIP, cfg.Limits.RateBurst)
 	s.state.Store(&serverState{cfg: cfg, eng: eng})
 	s.metrics.SetRuleCount(eng.Len())
 }

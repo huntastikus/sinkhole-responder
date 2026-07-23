@@ -173,6 +173,65 @@ func TestBackupConfigRotatesAndPrunes(t *testing.T) {
 	}
 }
 
+func TestListBackupsReportsNumberedBackups(t *testing.T) {
+	d, err := New(filepath.Join(t.TempDir(), "state"))
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	configPath := d.Path("config.yaml")
+	contents := []string{"version: one\n", "version: two-longer\n"}
+	for _, content := range contents {
+		if err := os.WriteFile(configPath, []byte(content), 0o600); err != nil {
+			t.Fatalf("WriteFile() error = %v", err)
+		}
+		if err := d.BackupConfig(configPath, 10); err != nil {
+			t.Fatalf("BackupConfig() error = %v", err)
+		}
+	}
+
+	backups, err := ListBackups(configPath)
+	if err != nil {
+		t.Fatalf("ListBackups() error = %v", err)
+	}
+	if len(backups) != 2 {
+		t.Fatalf("ListBackups() returned %d entries, want 2", len(backups))
+	}
+	for i, backup := range backups {
+		wantNumber := i + 1
+		wantName := fmt.Sprintf("config.yaml.bak.%03d", wantNumber)
+		if backup.Number != wantNumber || backup.Name != wantName {
+			t.Errorf("backup %d = number %d, name %q; want %d, %q", i, backup.Number, backup.Name, wantNumber, wantName)
+		}
+		if backup.Size != int64(len(contents[i])) {
+			t.Errorf("backup %d size = %d, want %d", i, backup.Size, len(contents[i]))
+		}
+		if backup.ModTime.IsZero() {
+			t.Errorf("backup %d has zero modification time", i)
+		}
+	}
+}
+
+func TestListBackupsRejectsSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation requires privileges on Windows")
+	}
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("version: one\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	outside := filepath.Join(t.TempDir(), "outside")
+	if err := os.WriteFile(outside, []byte("secret"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, configPath+".bak.001"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ListBackups(configPath); err == nil {
+		t.Fatal("ListBackups() error = nil, want symlink rejection")
+	}
+}
+
 func TestBackupConfigAllowsConfigOutsideStateRoot(t *testing.T) {
 	base := t.TempDir()
 	d, err := New(filepath.Join(base, "state"))

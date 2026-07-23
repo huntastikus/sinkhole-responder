@@ -1,6 +1,8 @@
 package rulepacks
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"slices"
 	"strings"
@@ -126,6 +128,31 @@ func TestMergeUnknownPack(t *testing.T) {
 	}
 }
 
+func TestRulesReturnsEffectivePackRules(t *testing.T) {
+	gptRules, ok := Rules("gpt")
+	if !ok || len(gptRules) == 0 {
+		t.Fatalf("Rules(gpt) = %d rules, %v; want known non-empty pack", len(gptRules), ok)
+	}
+	if gptRules[0].Name == "" {
+		t.Fatal("Rules(gpt) returned an unnamed rule")
+	}
+
+	recommended, ok := Rules("recommended")
+	if !ok || len(recommended) == 0 {
+		t.Fatalf("Rules(recommended) = %d rules, %v; want expanded manifest", len(recommended), ok)
+	}
+	seen := make(map[string]bool, len(recommended))
+	for _, rule := range recommended {
+		if seen[rule.Name] {
+			t.Fatalf("Rules(recommended) contains duplicate rule %q", rule.Name)
+		}
+		seen[rule.Name] = true
+	}
+	if _, ok := Rules("nope"); ok {
+		t.Fatal("Rules(nope) reported an unknown pack as present")
+	}
+}
+
 func TestPackStubReferencesExist(t *testing.T) {
 	ruleNames := make(map[string]string)
 	for name, pack := range packFiles {
@@ -174,6 +201,38 @@ func TestParsePackRejectsUnknownFields(t *testing.T) {
 			_, err := parsePack([]byte(input))
 			if err == nil || !strings.Contains(err.Error(), "field unknown_"+name+" not found") {
 				t.Fatalf("parsePack() error = %v, want yaml.v3 unknown-field error", err)
+			}
+		})
+	}
+}
+
+func TestPackPatternsMatchRealWorldDeepPaths(t *testing.T) {
+	tests := []struct {
+		pack string
+		url  string
+	}{
+		{"gpt", "https://securepubads.g.doubleclick.net/pagead/managed/js/gdt/m202401/tag/js/gpt.js"},
+		{"gpt", "https://www.googletagservices.com/tag/js/gpt.js"},
+		{"analytics", "https://www.google-analytics.com/plugins/ua/analytics.js"},
+		{"adsense", "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"},
+		{"facebook", "https://connect.facebook.net/en_US/fbevents.js"},
+		{"amazon-tam", "https://c.amazon-adsystem.com/aax2/apstag.js"},
+		{"cmp", "https://cdn.cookielaw.org/scripttemplates/otSDKStub.js"},
+		{"prebid", "https://cdn.jsdelivr.net/npm/prebid.js@latest/dist/prebid.js"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.pack+" "+tt.url, func(t *testing.T) {
+			pack, ok := packFiles[tt.pack]
+			if !ok {
+				t.Fatalf("pack %q not found", tt.pack)
+			}
+			engine, err := rules.Compile(pack.Rules, t.TempDir())
+			if err != nil {
+				t.Fatalf("compile pack %q: %v", tt.pack, err)
+			}
+			request := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			if _, matched := engine.Match(request); !matched {
+				t.Fatalf("pack %q did not match %s", tt.pack, tt.url)
 			}
 		})
 	}

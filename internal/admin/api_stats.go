@@ -15,6 +15,7 @@ type statsResponse struct {
 	RequestsTotal    uint64            `json:"requests_total"`
 	RequestsByKind   map[string]uint64 `json:"requests_by_kind"`
 	RequestsByStatus map[string]uint64 `json:"requests_by_status"`
+	RequestsByRule   map[string]uint64 `json:"requests_by_rule"`
 	RPS              float64           `json:"rps"`
 	RulesLoaded      int64             `json:"rules_loaded"`
 	LeafCacheSize    int64             `json:"leaf_cache_size"`
@@ -52,6 +53,7 @@ func (s *Server) handleStats(w http.ResponseWriter, _ *http.Request) {
 		RequestsTotal:    snapshot.RequestsTotal,
 		RequestsByKind:   snapshot.RequestsByKind,
 		RequestsByStatus: make(map[string]uint64, len(snapshot.RequestsByStatus)),
+		RequestsByRule:   snapshot.RequestsByRule,
 		RulesLoaded:      snapshot.RulesLoaded,
 		LeafCacheSize:    snapshot.LeafCacheSize,
 		Duration: durationResponse{
