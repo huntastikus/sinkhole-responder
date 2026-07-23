@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isDuration, isHostPort, setByPath } from "./web/config.js";
+import { isDirty, isDuration, isHostPort, setByPath, setDirty } from "./web/config.js";
 
 test("setByPath mutates only the requested leaf", () => {
   const config = {
@@ -33,4 +33,16 @@ test("host-port validation accepts hostnames, IPv4, and bracketed IPv6", () => {
   for (const value of ["localhost", "::1:8443", "host:70000", ":8080", "host:http"]) {
     assert.equal(isHostPort(value), false, value);
   }
+});
+
+test("dirty state updates the unsaved badge", () => {
+  const badge = { hidden: true };
+  globalThis.document = { getElementById: () => badge };
+  setDirty(true);
+  assert.equal(isDirty(), true);
+  assert.equal(badge.hidden, false);
+  setDirty(false);
+  assert.equal(isDirty(), false);
+  assert.equal(badge.hidden, true);
+  delete globalThis.document;
 });
