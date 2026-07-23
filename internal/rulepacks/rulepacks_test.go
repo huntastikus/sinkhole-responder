@@ -1,6 +1,8 @@
 package rulepacks
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"slices"
 	"strings"
@@ -174,6 +176,38 @@ func TestParsePackRejectsUnknownFields(t *testing.T) {
 			_, err := parsePack([]byte(input))
 			if err == nil || !strings.Contains(err.Error(), "field unknown_"+name+" not found") {
 				t.Fatalf("parsePack() error = %v, want yaml.v3 unknown-field error", err)
+			}
+		})
+	}
+}
+
+func TestPackPatternsMatchRealWorldDeepPaths(t *testing.T) {
+	tests := []struct {
+		pack string
+		url  string
+	}{
+		{"gpt", "https://securepubads.g.doubleclick.net/pagead/managed/js/gdt/m202401/tag/js/gpt.js"},
+		{"gpt", "https://www.googletagservices.com/tag/js/gpt.js"},
+		{"analytics", "https://www.google-analytics.com/plugins/ua/analytics.js"},
+		{"adsense", "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"},
+		{"facebook", "https://connect.facebook.net/en_US/fbevents.js"},
+		{"amazon-tam", "https://c.amazon-adsystem.com/aax2/apstag.js"},
+		{"cmp", "https://cdn.cookielaw.org/scripttemplates/otSDKStub.js"},
+		{"prebid", "https://cdn.jsdelivr.net/npm/prebid.js@latest/dist/prebid.js"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.pack+" "+tt.url, func(t *testing.T) {
+			pack, ok := packFiles[tt.pack]
+			if !ok {
+				t.Fatalf("pack %q not found", tt.pack)
+			}
+			engine, err := rules.Compile(pack.Rules, t.TempDir())
+			if err != nil {
+				t.Fatalf("compile pack %q: %v", tt.pack, err)
+			}
+			request := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			if _, matched := engine.Match(request); !matched {
+				t.Fatalf("pack %q did not match %s", tt.pack, tt.url)
 			}
 		})
 	}

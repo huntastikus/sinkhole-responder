@@ -12,8 +12,8 @@ match criterion. Omitted response fields fall back to generic selection.
 | Field | Matching behavior |
 | --- | --- |
 | `host` | Exact, case-insensitive hostname after port removal and IDNA normalization. |
-| `host_glob` | Go path-style glob against the normalized ASCII/punycode hostname. |
-| `path_glob` | Go path-style glob against the URL path, never the query string. |
+| `host_glob` | Go path-style glob against the normalized ASCII/punycode hostname. A standalone `**` segment is accepted; because hostnames contain no `/`, it behaves like `*` rather than recursing across dots. |
+| `path_glob` | Go path-style glob against the URL path, never the query string. A standalone `**` segment matches zero or more path segments, so `**/gpt.js` matches `/gpt.js` and `/a/b/gpt.js`. `*` still never crosses `/`. |
 | `path_regex` | Go regular expression against the URL path. |
 | `method` | Exact HTTP method: GET, HEAD, POST, PUT, PATCH, DELETE, or OPTIONS. |
 | `sec_fetch_dest` | Case-insensitive exact match against `Sec-Fetch-Dest`. |
@@ -108,4 +108,3 @@ generic image, script, JSON, iframe, and CORS-preflight checks, plus the
 site-specific `ExampleAds` behavior.
 
 [Back to the documentation index](README.md)
-
