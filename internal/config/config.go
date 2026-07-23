@@ -35,11 +35,11 @@ type Config struct {
 // RestartRequired reports whether moving from the running baseline to desired
 // changes any setting that is bound once at process startup and cannot be
 // applied by a live reload: the data-plane listeners, TLS, the management
-// listener, request limits, the admin plane's listener and TLS, and the state
-// directory. Request-time settings — rules, defaults, JSONP, all logging fields,
-// and the admin session/login tuning — are applied live by a reload and are
-// intentionally excluded, so reverting a change back to the running values
-// clears the requirement.
+// listener, request timeouts and size limits, the admin plane's listener and
+// TLS, and the state directory. Request-time settings — rules, defaults, JSONP,
+// rate limiting, all logging fields, and the admin session/login tuning — are
+// applied live by a reload and are intentionally excluded, so reverting a
+// change back to the running values clears the requirement.
 func RestartRequired(baseline, desired *Config) bool {
 	if baseline == nil || desired == nil {
 		return false
@@ -48,11 +48,19 @@ func RestartRequired(baseline, desired *Config) bool {
 		!slices.Equal(baseline.Listen.HTTPS, desired.Listen.HTTPS) ||
 		!reflect.DeepEqual(baseline.TLS, desired.TLS) ||
 		!reflect.DeepEqual(baseline.Management, desired.Management) ||
-		!reflect.DeepEqual(baseline.Limits, desired.Limits) ||
+		limitsRequireRestart(baseline.Limits, desired.Limits) ||
 		baseline.StateDir != desired.StateDir ||
 		baseline.Admin.Enabled != desired.Admin.Enabled ||
 		baseline.Admin.Listen != desired.Admin.Listen ||
 		!reflect.DeepEqual(baseline.Admin.TLS, desired.Admin.TLS)
+}
+
+// limitsRequireRestart compares limits ignoring rate_per_ip/rate_burst, which
+// SwapConfig applies live.
+func limitsRequireRestart(baseline, desired LimitsConfig) bool {
+	baseline.RatePerIP, desired.RatePerIP = 0, 0
+	baseline.RateBurst, desired.RateBurst = 0, 0
+	return !reflect.DeepEqual(baseline, desired)
 }
 
 type ListenConfig struct {
