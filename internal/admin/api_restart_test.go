@@ -9,7 +9,7 @@ import (
 )
 
 func TestHandleRestart(t *testing.T) {
-	server, _ := newHealthTestServer(t, greenHealthConfig())
+	server, _ := newHealthTestServer(t, greenHealthConfig(t))
 
 	var mu sync.Mutex
 	triggered := 0

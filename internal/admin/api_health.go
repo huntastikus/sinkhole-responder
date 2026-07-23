@@ -1,15 +1,20 @@
 package admin
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/huntastikus/sinkhole-responder/internal/config"
 	"github.com/huntastikus/sinkhole-responder/internal/rulepacks"
 	"github.com/huntastikus/sinkhole-responder/internal/state"
+	"github.com/huntastikus/sinkhole-responder/internal/tlsx"
 )
 
 type healthStatus string
@@ -36,7 +41,7 @@ func (s *Server) handleSystemHealth(w http.ResponseWriter, _ *http.Request) {
 	cfg := s.deps.Cfg()
 	checks := []healthCheck{
 		listenersHealth(cfg),
-		tlsHealth(cfg),
+		tlsHealth(cfg, stateRootOf(s.deps.State)),
 		stateDirHealth(s.deps.State),
 		recentErrorsHealth(s),
 		rulepacksHealth(cfg),
@@ -82,33 +87,100 @@ func configuredCount(addresses []string) int {
 	return count
 }
 
-func tlsHealth(cfg *config.Config) healthCheck {
+const certExpiryWarn = 30 * 24 * time.Hour
+
+func stateRootOf(dir *state.Dir) string {
+	if dir == nil {
+		return ""
+	}
+	return dir.Root
+}
+
+// expiryStatus grades a certificate's NotAfter: red when expired, amber when
+// inside the warn window, green otherwise.
+func expiryStatus(label string, notAfter, now time.Time) (healthStatus, string) {
+	date := notAfter.UTC().Format("2006-01-02")
+	switch {
+	case now.After(notAfter):
+		return healthRed, fmt.Sprintf("%s expired %s", label, date)
+	case now.Add(certExpiryWarn).After(notAfter):
+		return healthAmber, fmt.Sprintf("%s expires %s", label, date)
+	default:
+		return healthGreen, fmt.Sprintf("%s expires %s", label, date)
+	}
+}
+
+func tlsHealth(cfg *config.Config, stateRoot string) healthCheck {
 	switch cfg.TLS.Mode {
 	case "disabled":
 		return healthCheck{Name: "tls", Status: healthAmber, Detail: "HTTPS off"}
 	case "static":
-		if len(cfg.TLS.Static.Certs) == 0 {
-			return healthCheck{Name: "tls", Status: healthRed, Detail: "static certificate paths missing"}
-		}
-		for _, pair := range cfg.TLS.Static.Certs {
-			if strings.TrimSpace(pair.CertFile) == "" || strings.TrimSpace(pair.KeyFile) == "" {
-				return healthCheck{Name: "tls", Status: healthRed, Detail: "static certificate paths missing"}
-			}
-		}
-		return healthCheck{Name: "tls", Status: healthGreen, Detail: fmt.Sprintf("%d static certificate pair(s) configured", len(cfg.TLS.Static.Certs))}
+		return staticTLSHealth(cfg)
 	case "local-ca":
-		caCert := strings.TrimSpace(cfg.TLS.LocalCA.CACert)
-		caKey := strings.TrimSpace(cfg.TLS.LocalCA.CAKey)
-		if (caCert == "") != (caKey == "") {
-			return healthCheck{Name: "tls", Status: healthRed, Detail: "local CA paths must be set together"}
-		}
-		if caCert == "" {
-			return healthCheck{Name: "tls", Status: healthGreen, Detail: "local CA (auto-generated)"}
-		}
-		return healthCheck{Name: "tls", Status: healthGreen, Detail: "local CA configured"}
+		return localCATLSHealth(cfg, stateRoot)
 	default:
 		return healthCheck{Name: "tls", Status: healthRed, Detail: "TLS mode misconfigured"}
 	}
+}
+
+func staticTLSHealth(cfg *config.Config) healthCheck {
+	if len(cfg.TLS.Static.Certs) == 0 {
+		return healthCheck{Name: "tls", Status: healthRed, Detail: "static certificate paths missing"}
+	}
+	now := time.Now()
+	var soonest time.Time
+	for i, pair := range cfg.TLS.Static.Certs {
+		if strings.TrimSpace(pair.CertFile) == "" || strings.TrimSpace(pair.KeyFile) == "" {
+			return healthCheck{Name: "tls", Status: healthRed, Detail: "static certificate paths missing"}
+		}
+		certificate, err := tls.LoadX509KeyPair(pair.CertFile, pair.KeyFile)
+		if err != nil {
+			return healthCheck{Name: "tls", Status: healthRed, Detail: fmt.Sprintf("static certificate pair %d unreadable", i)}
+		}
+		leaf, err := x509.ParseCertificate(certificate.Certificate[0])
+		if err != nil {
+			return healthCheck{Name: "tls", Status: healthRed, Detail: fmt.Sprintf("static certificate pair %d unparseable", i)}
+		}
+		if soonest.IsZero() || leaf.NotAfter.Before(soonest) {
+			soonest = leaf.NotAfter
+		}
+	}
+	status, detail := expiryStatus(fmt.Sprintf("%d static certificate pair(s), soonest", len(cfg.TLS.Static.Certs)), soonest, now)
+	return healthCheck{Name: "tls", Status: status, Detail: detail}
+}
+
+func localCATLSHealth(cfg *config.Config, stateRoot string) healthCheck {
+	caCert := strings.TrimSpace(cfg.TLS.LocalCA.CACert)
+	caKey := strings.TrimSpace(cfg.TLS.LocalCA.CAKey)
+	if (caCert == "") != (caKey == "") {
+		return healthCheck{Name: "tls", Status: healthRed, Detail: "local CA paths must be set together"}
+	}
+	if caCert == "" && stateRoot == "" {
+		// No configured paths and no state dir to resolve the generated
+		// location against; keep the pre-inspection behavior.
+		return healthCheck{Name: "tls", Status: healthGreen, Detail: "local CA (auto-generated)"}
+	}
+	certPath, keyPath := tlsx.ResolveCAPaths(cfg.TLS.LocalCA, stateRoot)
+	certPEM, err := os.ReadFile(certPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return healthCheck{Name: "tls", Status: healthAmber, Detail: "local CA not generated yet"}
+		}
+		return healthCheck{Name: "tls", Status: healthRed, Detail: "local CA certificate unreadable"}
+	}
+	if _, err := os.Stat(keyPath); err != nil {
+		return healthCheck{Name: "tls", Status: healthRed, Detail: "local CA key missing"}
+	}
+	block, _ := pem.Decode(certPEM)
+	if block == nil {
+		return healthCheck{Name: "tls", Status: healthRed, Detail: "local CA certificate is not valid PEM"}
+	}
+	ca, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return healthCheck{Name: "tls", Status: healthRed, Detail: "local CA certificate unparseable"}
+	}
+	status, detail := expiryStatus("local CA", ca.NotAfter, time.Now())
+	return healthCheck{Name: "tls", Status: status, Detail: detail}
 }
 
 func stateDirHealth(dir *state.Dir) healthCheck {
