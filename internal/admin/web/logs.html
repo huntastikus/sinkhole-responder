@@ -35,6 +35,10 @@
         </div>
         <div class="logs-controls" aria-label="Log filters">
           <div class="field logs-control">
+            <label for="logs-search">Search</label>
+            <input id="logs-search" type="text" autocomplete="off" placeholder="Message or attribute">
+          </div>
+          <div class="field logs-control">
             <label for="logs-level">Minimum level</label>
             <select id="logs-level" name="level">
               <option value="debug">Debug</option>
@@ -52,6 +56,7 @@
             <span>Auto-refresh</span>
             <span class="field-help">Every 3 seconds</span>
           </label>
+          <button id="logs-download" class="button button-small" type="button">Download JSON</button>
         </div>
       </div>
 
