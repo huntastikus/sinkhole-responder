@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/huntastikus/sinkhole-responder/compare/v0.3.0...v0.3.1) (2026-07-23)
+
+
+### Documentation
+
+* add 128px PNG icon for container managers ([622a457](https://github.com/huntastikus/sinkhole-responder/commit/622a457454ac8d594b35a735ab546dbd337dcb98))
+
 ## [0.3.0](https://github.com/huntastikus/sinkhole-responder/compare/v0.2.2...v0.3.0) (2026-07-23)
 
 
