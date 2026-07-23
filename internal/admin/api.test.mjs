@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { APIError, SessionExpiredError, requestJSON } from "./web/api.js";
+import { APIError, copyText, SessionExpiredError, requestJSON } from "./web/api.js";
 
 function response({ body = {}, contentType = "application/json", ok = true, redirected = false, status = 200 } = {}) {
   return {
@@ -73,5 +73,26 @@ test("requestJSON wraps invalid JSON responses", async () => {
   } finally {
     delete globalThis.document;
     delete globalThis.fetch;
+  }
+});
+
+test("copyText reports clipboard success and failure", async () => {
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { clipboard: { writeText: async () => {} } },
+  });
+  try {
+    assert.equal(await copyText("SHA-256"), true);
+    globalThis.navigator.clipboard.writeText = async () => {
+      throw new Error("denied");
+    };
+    assert.equal(await copyText("SHA-256"), false);
+  } finally {
+    if (originalNavigator) {
+      Object.defineProperty(globalThis, "navigator", originalNavigator);
+    } else {
+      delete globalThis.navigator;
+    }
   }
 });

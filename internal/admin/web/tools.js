@@ -1,6 +1,6 @@
 "use strict";
 
-import { requestJSON } from "./api.js";
+import { copyText, requestJSON } from "./api.js";
 
 let generatedYAML = "";
 
@@ -72,14 +72,9 @@ async function generateAGHConfig(event) {
 async function copyAGHConfig() {
   const status = document.getElementById("copy-agh-status");
   status.textContent = "";
-  if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
-    status.textContent = "Clipboard access is unavailable. Select and copy the YAML manually.";
-    return;
-  }
-  try {
-    await navigator.clipboard.writeText(generatedYAML);
+  if (await copyText(generatedYAML)) {
     status.textContent = "Copied.";
-  } catch {
+  } else {
     status.textContent = "Copy failed. Select and copy the YAML manually.";
   }
 }

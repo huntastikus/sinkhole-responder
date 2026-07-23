@@ -27,6 +27,15 @@ export class APIError extends Error {
 
 export class SessionExpiredError extends Error {}
 
+export async function copyText(value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function requestJSON(path, options = {}) {
   const method = (options.method || "GET").toUpperCase();
   const headers = new Headers(options.headers || {});

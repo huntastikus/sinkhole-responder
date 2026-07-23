@@ -149,6 +149,41 @@ func TestAdminPageShowsReleaseCandidateVersion(t *testing.T) {
 	}
 }
 
+func TestAdminPageUsesValidThemeCookie(t *testing.T) {
+	t.Parallel()
+
+	server := newTestServer(t, config.AdminConfig{})
+	saveTestCredential(t, server, "correct horse battery staple")
+	for _, test := range []struct {
+		name       string
+		theme      string
+		wantMarkup string
+	}{
+		{name: "dark", theme: "dark", wantMarkup: `<html lang="en" data-theme="dark">`},
+		{name: "garbage", theme: `dark" onclick="alert(1)`, wantMarkup: `<html lang="en">`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/config", nil)
+			request.AddCookie(validSessionCookie(t, server))
+			request.AddCookie(&http.Cookie{Name: "sr_theme", Value: test.theme})
+			response := httptest.NewRecorder()
+
+			server.Handler().ServeHTTP(response, request)
+
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
+			}
+			body := response.Body.String()
+			if !strings.Contains(body, test.wantMarkup) {
+				t.Errorf("body does not contain %q", test.wantMarkup)
+			}
+			if test.name == "garbage" && strings.Contains(body, "data-theme=") {
+				t.Error("invalid theme cookie was injected into the page")
+			}
+		})
+	}
+}
+
 func TestHandlerRecoversPanic(t *testing.T) {
 	t.Parallel()
 

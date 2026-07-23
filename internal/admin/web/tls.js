@@ -1,6 +1,6 @@
 "use strict";
 
-import { APIError, hideBanner, requestJSON, setBusy, showBanner, showToast } from "./api.js";
+import { APIError, copyText, hideBanner, requestJSON, setBusy, showBanner, showToast } from "./api.js";
 
 let configMtime = 0;
 let currentConfig = {};
@@ -10,6 +10,26 @@ let uploadedCertificate;
 function displayDate(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+async function copyFingerprint(button, value) {
+  button.disabled = true;
+  button.textContent = await copyText(value) ? "Copied" : "Copy failed — select manually";
+  window.setTimeout(() => {
+    button.textContent = "Copy";
+    button.disabled = false;
+  }, 2000);
+}
+
+function fingerprintCopyButton(value, label) {
+  const button = document.createElement("button");
+  button.className = "button button-small copy-button";
+  button.type = "button";
+  button.textContent = "Copy";
+  button.setAttribute("aria-label", label);
+  button.setAttribute("aria-live", "polite");
+  button.addEventListener("click", () => void copyFingerprint(button, value));
+  return button;
 }
 
 function renderStatus(status) {
@@ -43,9 +63,14 @@ function renderStatus(status) {
     const expiry = document.createElement("td");
     expiry.textContent = displayDate(certificate.not_after);
     const fingerprint = document.createElement("td");
+    fingerprint.className = "fingerprint-copy";
     const code = document.createElement("code");
     code.textContent = certificate.fingerprint;
-    fingerprint.append(code);
+    const copy = fingerprintCopyButton(
+      certificate.fingerprint,
+      `Copy fingerprint for ${certificate.hosts?.join(", ") || "static certificate"}`,
+    );
+    fingerprint.append(code, copy);
     row.append(hosts, subject, expiry, fingerprint);
     body.append(row);
   }
@@ -238,6 +263,16 @@ async function activateUploadedCertificate() {
 }
 
 function main() {
+  for (const [buttonID, fingerprintID] of [
+    ["copy-ca-fingerprint", "ca-fingerprint"],
+    ["copy-generated-fingerprint", "generated-fingerprint"],
+    ["copy-uploaded-fingerprint", "uploaded-fingerprint"],
+  ]) {
+    const button = document.getElementById(buttonID);
+    button.addEventListener("click", () => {
+      void copyFingerprint(button, document.getElementById(fingerprintID).textContent);
+    });
+  }
   document.getElementById("mode-form").addEventListener("submit", submitMode);
   document.getElementById("generate-form").addEventListener("submit", generateCA);
   document.getElementById("activate-local-ca").addEventListener("click", activateGeneratedCA);
