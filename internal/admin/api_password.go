@@ -21,6 +21,12 @@ func (s *Server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
 		writeConfigError(w, http.StatusBadRequest, "decode request")
 		return
 	}
+
+	// Serialize credential mutations so concurrent changes cannot interleave
+	// the verify/rotate/save sequence; handleSetup uses the same lock.
+	s.setupMu.Lock()
+	defer s.setupMu.Unlock()
+
 	credential, present, err := s.loadCredential()
 	if err != nil {
 		s.internalError(w, "load admin credential", err)

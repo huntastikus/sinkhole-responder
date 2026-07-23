@@ -97,7 +97,9 @@ The token authorizes only these admin API reads:
 
 It cannot change configuration, restart the process, or call other admin
 routes. Protect the plaintext like a password and use HTTPS when sending it
-over a network.
+over a network. Note that `GET /api/logs` exposes recent log records to the
+token holder — if you enable request body or query logging (see "Logging and
+privacy" below), that captured content is readable with the token too.
 
 ## Logging and privacy
 
