@@ -122,7 +122,7 @@ func TestTLSHealthLocalCA(t *testing.T) {
 		wantDetail string
 	}{
 		{"auto-generated", "", "", healthGreen, "local CA (auto-generated)"},
-		{"configured", "/tls/ca.cert.pem", "/tls/ca.key.pem", healthAmber, "local CA not generated yet"},
+		{"configured", "/tls/ca.cert.pem", "/tls/ca.key.pem", healthAmber, "configured local CA files not found"},
 		{"cert only", "/tls/ca.cert.pem", "", healthRed, "local CA paths must be set together"},
 		{"key only", "", "/tls/ca.key.pem", healthRed, "local CA paths must be set together"},
 	}
@@ -236,6 +236,30 @@ func TestTLSHealthLocalCAExpiry(t *testing.T) {
 			t.Fatalf("check = {%q, %q}, want green with expiry", check.Status, check.Detail)
 		}
 	})
+	t.Run("corrupt CA key is red", func(t *testing.T) {
+		stateRoot := t.TempDir()
+		tlsDir := filepath.Join(stateRoot, "tls")
+		if err := os.MkdirAll(tlsDir, 0o700); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		certPath, keyPath := writeTestCertPair(t, tlsDir, time.Now().Add(3650*24*time.Hour))
+		if err := os.Rename(certPath, filepath.Join(tlsDir, "ca.cert.pem")); err != nil {
+			t.Fatalf("rename cert: %v", err)
+		}
+		if err := os.Rename(keyPath, filepath.Join(tlsDir, "ca.key.pem")); err != nil {
+			t.Fatalf("rename key: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(tlsDir, "ca.key.pem"), []byte("not a key"), 0o600); err != nil {
+			t.Fatalf("corrupt key: %v", err)
+		}
+		cfg := &config.Config{}
+		cfg.TLS.Mode = "local-ca"
+		check := tlsHealth(cfg, stateRoot)
+		if check.Status != healthRed || !strings.Contains(check.Detail, "invalid") {
+			t.Fatalf("check = {%q, %q}, want red invalid", check.Status, check.Detail)
+		}
+	})
+
 	t.Run("CA expiring soon is amber", func(t *testing.T) {
 		stateRoot := t.TempDir()
 		tlsDir := filepath.Join(stateRoot, "tls")

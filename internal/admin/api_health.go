@@ -3,7 +3,6 @@ package admin
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -135,11 +134,11 @@ func staticTLSHealth(cfg *config.Config) healthCheck {
 		}
 		certificate, err := tls.LoadX509KeyPair(pair.CertFile, pair.KeyFile)
 		if err != nil {
-			return healthCheck{Name: "tls", Status: healthRed, Detail: fmt.Sprintf("static certificate pair %d unreadable", i)}
+			return healthCheck{Name: "tls", Status: healthRed, Detail: fmt.Sprintf("static certificate pair %d unreadable", i+1)}
 		}
 		leaf, err := x509.ParseCertificate(certificate.Certificate[0])
 		if err != nil {
-			return healthCheck{Name: "tls", Status: healthRed, Detail: fmt.Sprintf("static certificate pair %d unparseable", i)}
+			return healthCheck{Name: "tls", Status: healthRed, Detail: fmt.Sprintf("static certificate pair %d unparseable", i+1)}
 		}
 		if soonest.IsZero() || leaf.NotAfter.Before(soonest) {
 			soonest = leaf.NotAfter
@@ -161,9 +160,11 @@ func localCATLSHealth(cfg *config.Config, stateRoot string) healthCheck {
 		return healthCheck{Name: "tls", Status: healthGreen, Detail: "local CA (auto-generated)"}
 	}
 	certPath, keyPath := tlsx.ResolveCAPaths(cfg.TLS.LocalCA, stateRoot)
-	certPEM, err := os.ReadFile(certPath)
-	if err != nil {
+	if _, err := os.Stat(certPath); err != nil {
 		if os.IsNotExist(err) {
+			if caCert != "" {
+				return healthCheck{Name: "tls", Status: healthAmber, Detail: "configured local CA files not found"}
+			}
 			return healthCheck{Name: "tls", Status: healthAmber, Detail: "local CA not generated yet"}
 		}
 		return healthCheck{Name: "tls", Status: healthRed, Detail: "local CA certificate unreadable"}
@@ -171,11 +172,13 @@ func localCATLSHealth(cfg *config.Config, stateRoot string) healthCheck {
 	if _, err := os.Stat(keyPath); err != nil {
 		return healthCheck{Name: "tls", Status: healthRed, Detail: "local CA key missing"}
 	}
-	block, _ := pem.Decode(certPEM)
-	if block == nil {
-		return healthCheck{Name: "tls", Status: healthRed, Detail: "local CA certificate is not valid PEM"}
+	// Load the full pair, mirroring loadLocalCA's real serving-path check, so a
+	// corrupt or mismatched CA key cannot report green.
+	pair, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		return healthCheck{Name: "tls", Status: healthRed, Detail: "local CA certificate or key invalid"}
 	}
-	ca, err := x509.ParseCertificate(block.Bytes)
+	ca, err := x509.ParseCertificate(pair.Certificate[0])
 	if err != nil {
 		return healthCheck{Name: "tls", Status: healthRed, Detail: "local CA certificate unparseable"}
 	}
