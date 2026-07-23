@@ -28,6 +28,30 @@ type rulepackToggleRequest struct {
 	Mtime   jsonInt64 `json:"mtime"`
 }
 
+type rulepackPreviewResponse struct {
+	Name  string                `json:"name"`
+	Title string                `json:"title"`
+	Rules []rulepackPreviewRule `json:"rules"`
+}
+
+type rulepackPreviewRule struct {
+	Name      string                         `json:"name"`
+	Host      string                         `json:"host,omitempty"`
+	HostGlob  string                         `json:"host_glob,omitempty"`
+	PathGlob  string                         `json:"path_glob,omitempty"`
+	PathRegex string                         `json:"path_regex,omitempty"`
+	Method    string                         `json:"method,omitempty"`
+	Response  rulepackPreviewResponseSummary `json:"response"`
+}
+
+type rulepackPreviewResponseSummary struct {
+	Status      int    `json:"status"`
+	ContentType string `json:"content_type,omitempty"`
+	Embedded    string `json:"embedded,omitempty"`
+	DelayMS     int    `json:"delay_ms"`
+	HasBody     bool   `json:"has_body"`
+}
+
 func (s *Server) handleRulepacks(w http.ResponseWriter, _ *http.Request) {
 	cfg, mtime, err := s.configView()
 	if err != nil {
@@ -51,6 +75,48 @@ func (s *Server) handleRulepacks(w http.ResponseWriter, _ *http.Request) {
 		})
 	}
 	writeConfigJSON(w, http.StatusOK, rulepacksResponse{Packs: packs, Mtime: jsonInt64(mtime)})
+}
+
+func (s *Server) handleRulepackPreview(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
+	packRules, ok := rulepacks.Rules(name)
+	if !ok {
+		writeConfigError(w, http.StatusNotFound, fmt.Sprintf("unknown rulepack %q", name))
+		return
+	}
+	title := name
+	for _, pack := range rulepacks.Available() {
+		if pack.Name == name {
+			title = pack.Title
+			break
+		}
+	}
+	response := rulepackPreviewResponse{
+		Name:  name,
+		Title: title,
+		Rules: make([]rulepackPreviewRule, len(packRules)),
+	}
+	for i, rule := range packRules {
+		response.Rules[i] = rulepackPreviewRule{
+			Name:      rule.Name,
+			Host:      rule.Host,
+			HostGlob:  rule.HostGlob,
+			PathGlob:  rule.PathGlob,
+			PathRegex: rule.PathRegex,
+			Method:    rule.Method,
+			Response: rulepackPreviewResponseSummary{
+				Status:      rule.Response.Status,
+				ContentType: rule.Response.ContentType,
+				Embedded:    rule.Response.Embedded,
+				DelayMS:     rule.Response.DelayMS,
+				HasBody: rule.Response.Body != "" ||
+					rule.Response.BodyBase64 != "" ||
+					rule.Response.BodyFile != "" ||
+					rule.Response.Embedded != "",
+			},
+		}
+	}
+	writeConfigJSON(w, http.StatusOK, response)
 }
 
 func (s *Server) handleRulepackToggle(w http.ResponseWriter, r *http.Request) {

@@ -88,6 +88,23 @@
           <p id="agh-config-warning" class="raw-warning"></p>
         </div>
       </section>
+
+      <section class="config-card" aria-labelledby="api-token-title">
+        <h2 id="api-token-title">Read-only API token</h2>
+        <p class="section-help">Use one bearer token for scripted access to stats, history, health, and recent logs. The token is shown only when generated.</p>
+        <p id="api-token-status" class="section-help">Loading token status…</p>
+        <div class="form-actions">
+          <button id="generate-api-token" class="button button-primary" type="button">Generate token</button>
+          <button id="revoke-api-token" class="button button-danger" type="button" hidden>Revoke token</button>
+          <p id="api-token-message" class="form-error" role="status" aria-live="polite"></p>
+        </div>
+        <div id="api-token-result" class="preview-result" aria-live="polite" hidden>
+          <p class="raw-warning"><strong>Copy this token now.</strong> It cannot be shown again.</p>
+          <pre><code id="api-token-value"></code></pre>
+          <button id="copy-api-token" class="button button-secondary" type="button">Copy token</button>
+        </div>
+        <p class="section-help">Example: <code>curl -H 'Authorization: Bearer srt_…' http://&lt;host&gt;:8080/api/stats</code></p>
+      </section>
     </div>
   </main>
 </body>

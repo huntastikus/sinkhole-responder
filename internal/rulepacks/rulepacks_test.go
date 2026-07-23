@@ -126,6 +126,31 @@ func TestMergeUnknownPack(t *testing.T) {
 	}
 }
 
+func TestRulesReturnsEffectivePackRules(t *testing.T) {
+	gptRules, ok := Rules("gpt")
+	if !ok || len(gptRules) == 0 {
+		t.Fatalf("Rules(gpt) = %d rules, %v; want known non-empty pack", len(gptRules), ok)
+	}
+	if gptRules[0].Name == "" {
+		t.Fatal("Rules(gpt) returned an unnamed rule")
+	}
+
+	recommended, ok := Rules("recommended")
+	if !ok || len(recommended) == 0 {
+		t.Fatalf("Rules(recommended) = %d rules, %v; want expanded manifest", len(recommended), ok)
+	}
+	seen := make(map[string]bool, len(recommended))
+	for _, rule := range recommended {
+		if seen[rule.Name] {
+			t.Fatalf("Rules(recommended) contains duplicate rule %q", rule.Name)
+		}
+		seen[rule.Name] = true
+	}
+	if _, ok := Rules("nope"); ok {
+		t.Fatal("Rules(nope) reported an unknown pack as present")
+	}
+}
+
 func TestPackStubReferencesExist(t *testing.T) {
 	ruleNames := make(map[string]string)
 	for name, pack := range packFiles {

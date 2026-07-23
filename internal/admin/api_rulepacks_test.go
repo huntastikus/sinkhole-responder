@@ -102,6 +102,50 @@ func TestRulepacksAPIReadsEnabledStateAndMtimeFromDisk(t *testing.T) {
 	}
 }
 
+func TestRulepacksAPIPreviewSummarizesRulesWithoutBodies(t *testing.T) {
+	fixture := newRulepackAPIFixture(t)
+	response := performJSONRequest(t, fixture.server, http.MethodGet, "/api/rulepacks/preview?name=gpt", nil)
+	if response.Code != http.StatusOK {
+		t.Fatalf("preview status = %d, want %d; body = %q", response.Code, http.StatusOK, response.Body.String())
+	}
+	var body struct {
+		Name  string `json:"name"`
+		Title string `json:"title"`
+		Rules []struct {
+			Name     string `json:"name"`
+			Host     string `json:"host"`
+			PathGlob string `json:"path_glob"`
+			Response struct {
+				Status      int    `json:"status"`
+				ContentType string `json:"content_type"`
+				Embedded    string `json:"embedded"`
+				DelayMS     int    `json:"delay_ms"`
+				HasBody     bool   `json:"has_body"`
+				Body        string `json:"body"`
+			} `json:"response"`
+		} `json:"rules"`
+	}
+	decodeJSON(t, response, &body)
+	if body.Name != "gpt" || body.Title == "" || len(body.Rules) == 0 {
+		t.Fatalf("preview = %#v, want gpt metadata and rules", body)
+	}
+	first := body.Rules[0]
+	if first.Name == "" || first.Host == "" || first.PathGlob == "" || first.Response.Embedded == "" || !first.Response.HasBody {
+		t.Fatalf("first preview rule = %#v, want match and response summary", first)
+	}
+	if first.Response.Body != "" {
+		t.Fatal("preview response exposed body bytes")
+	}
+}
+
+func TestRulepacksAPIPreviewRejectsUnknownPack(t *testing.T) {
+	fixture := newRulepackAPIFixture(t)
+	response := performJSONRequest(t, fixture.server, http.MethodGet, "/api/rulepacks/preview?name=nope", nil)
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("preview status = %d, want %d; body = %q", response.Code, http.StatusNotFound, response.Body.String())
+	}
+}
+
 func TestRulepacksAPIToggleEnablePersistsAndReloads(t *testing.T) {
 	fixture := newRulepackAPIFixture(t, "recommended", "recommended")
 	response := postRulepackToggle(t, fixture, "gpt", true, configMtimeString(t, fixture.configPath))

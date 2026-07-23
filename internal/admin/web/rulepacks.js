@@ -44,7 +44,20 @@ function renderRulepacks(packs) {
     input.addEventListener("change", toggleRulepack);
     toggle.append(input);
 
-    card.append(header, description, toggle);
+    const previewButton = document.createElement("button");
+    previewButton.className = "button button-secondary button-small";
+    previewButton.type = "button";
+    previewButton.dataset.rulepackPreview = pack.name;
+    previewButton.setAttribute("aria-expanded", "false");
+    previewButton.setAttribute("aria-controls", `rulepack-${pack.name}-preview`);
+    previewButton.textContent = "View rules";
+    previewButton.addEventListener("click", toggleRulepackPreview);
+    const preview = document.createElement("div");
+    preview.id = `rulepack-${pack.name}-preview`;
+    preview.className = "rulepack-preview";
+    preview.hidden = true;
+
+    card.append(header, description, previewButton, preview, toggle);
     list.append(card);
   }
   list.setAttribute("aria-busy", "false");
@@ -54,6 +67,9 @@ function setBusy(busy) {
   document.getElementById("rulepack-list").setAttribute("aria-busy", String(busy));
   for (const input of document.querySelectorAll("[data-rulepack-name]")) {
     input.disabled = busy;
+  }
+  for (const button of document.querySelectorAll("[data-rulepack-preview]")) {
+    button.disabled = busy;
   }
 }
 
@@ -117,6 +133,85 @@ async function toggleRulepack(event) {
     }
   } finally {
     setBusy(false);
+  }
+}
+
+function summarizePreviewMatch(rule) {
+  const fields = [
+    ["host", rule.host],
+    ["host glob", rule.host_glob],
+    ["path glob", rule.path_glob],
+    ["path regex", rule.path_regex],
+    ["method", rule.method],
+  ];
+  return fields.filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join("; ") || "—";
+}
+
+function summarizePreviewResponse(response) {
+  const parts = [
+    response.status ? `status ${response.status}` : "default status",
+    response.content_type || "",
+    response.embedded ? `asset ${response.embedded}` : "",
+    response.delay_ms ? `${response.delay_ms} ms delay` : "",
+    response.has_body ? "body" : "no body",
+  ];
+  return parts.filter(Boolean).join("; ");
+}
+
+function renderRulepackPreview(container, rules) {
+  const scroll = document.createElement("div");
+  scroll.className = "table-scroll";
+  const table = document.createElement("table");
+  table.className = "data-table data-table-wide";
+  const head = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  for (const heading of ["Rule", "Match", "Response"]) {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.textContent = heading;
+    headerRow.append(cell);
+  }
+  head.append(headerRow);
+  const body = document.createElement("tbody");
+  for (const rule of rules) {
+    const row = document.createElement("tr");
+    for (const value of [rule.name, summarizePreviewMatch(rule), summarizePreviewResponse(rule.response || {})]) {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.append(cell);
+    }
+    body.append(row);
+  }
+  table.append(head, body);
+  scroll.append(table);
+  container.replaceChildren(scroll);
+}
+
+async function toggleRulepackPreview(event) {
+  const button = event.currentTarget;
+  const container = document.getElementById(button.getAttribute("aria-controls"));
+  if (button.getAttribute("aria-expanded") === "true") {
+    button.setAttribute("aria-expanded", "false");
+    button.textContent = "View rules";
+    container.hidden = true;
+    return;
+  }
+
+  button.disabled = true;
+  try {
+    if (!container.dataset.loaded) {
+      const result = await requestJSON(`/api/rulepacks/preview?name=${encodeURIComponent(button.dataset.rulepackPreview)}`);
+      renderRulepackPreview(container, Array.isArray(result.rules) ? result.rules : []);
+      container.dataset.loaded = "true";
+    }
+    button.setAttribute("aria-expanded", "true");
+    button.textContent = "Hide rules";
+    container.hidden = false;
+  } catch (error) {
+    container.replaceChildren(textElement("p", error instanceof Error ? error.message : "Rules could not be loaded.", "form-error"));
+    container.hidden = false;
+  } finally {
+    button.disabled = false;
   }
 }
 
