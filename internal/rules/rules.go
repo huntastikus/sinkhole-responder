@@ -88,13 +88,15 @@ func compileRule(rule Rule, configDir string) (compiledRule, error) {
 			Headers:     responseHeaders,
 			Delay:       time.Duration(rule.Response.DelayMS) * time.Millisecond,
 		},
-		hostGlob:     rule.HostGlob,
-		pathGlob:     rule.PathGlob,
-		method:       strings.ToUpper(rule.Method),
-		secFetchDest: rule.SecFetchDest,
-		accept:       strings.ToLower(rule.Accept),
-		query:        maps.Clone(rule.Query),
-		headers:      compileHeaders(rule.Headers),
+		hostGlob:         rule.HostGlob,
+		hostGlobSegments: doublestarSegments(rule.HostGlob),
+		pathGlob:         rule.PathGlob,
+		pathGlobSegments: doublestarSegments(rule.PathGlob),
+		method:           strings.ToUpper(rule.Method),
+		secFetchDest:     rule.SecFetchDest,
+		accept:           strings.ToLower(rule.Accept),
+		query:            maps.Clone(rule.Query),
+		headers:          compileHeaders(rule.Headers),
 	}
 
 	if rule.Host != "" {
@@ -104,12 +106,12 @@ func compileRule(rule Rule, configDir string) (compiledRule, error) {
 		}
 	}
 	if rule.HostGlob != "" {
-		if err := validateGlob(rule.HostGlob); err != nil {
+		if _, err := path.Match(rule.HostGlob, "x"); err != nil {
 			return compiledRule{}, fmt.Errorf("invalid host_glob %q: %w", rule.HostGlob, err)
 		}
 	}
 	if rule.PathGlob != "" {
-		if err := validateGlob(rule.PathGlob); err != nil {
+		if _, err := path.Match(rule.PathGlob, "x"); err != nil {
 			return compiledRule{}, fmt.Errorf("invalid path_glob %q: %w", rule.PathGlob, err)
 		}
 	}
@@ -135,21 +137,6 @@ func compileRule(rule Rule, configDir string) (compiledRule, error) {
 	}
 
 	return compiled, nil
-}
-
-// validateGlob reports whether every non-"**" segment of pattern is a valid
-// path.Match pattern. path.Match alone can miss a bad segment that sits after
-// a segment which already failed to match, so each segment is checked.
-func validateGlob(pattern string) error {
-	for _, segment := range strings.Split(pattern, "/") {
-		if segment == "**" {
-			continue
-		}
-		if _, err := path.Match(segment, "x"); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func compileBody(response Response, configDir string) ([]byte, bool, string, error) {

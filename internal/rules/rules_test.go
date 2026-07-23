@@ -476,15 +476,29 @@ func TestGlobMatchDoublestar(t *testing.T) {
 	}
 }
 
-func TestValidateGlobRejectsBadSegmentAfterDoublestar(t *testing.T) {
-	if err := validateGlob("**/["); err == nil {
-		t.Fatal("expected error for bad segment after **, got nil")
+func TestCompileGlobValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string
+		wantErr bool
+	}{
+		{"valid doublestar", "**/tag/js/gpt.js", false},
+		{"bad plain pattern", "/ads/[", true},
+		// path.Match validates the pattern remainder even after a mismatch,
+		// so whole-pattern validation catches bad segments after **.
+		{"bad segment after doublestar", "**/[", true},
+		// A character class spanning "/" is valid for path.Match and must
+		// keep compiling (it can never match a path segment, but rejecting
+		// it would break configs that load today).
+		{"class spanning slash", "/api[/.]v1", false},
 	}
-	if err := validateGlob("**/tag/js/gpt.js"); err != nil {
-		t.Fatalf("valid pattern rejected: %v", err)
-	}
-	if err := validateGlob("/ads/["); err == nil {
-		t.Fatal("expected error for bad plain pattern, got nil")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Compile([]Rule{{PathGlob: tt.pattern, Response: Response{Body: "x"}}}, t.TempDir())
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Compile(path_glob=%q) error = %v, wantErr %v", tt.pattern, err, tt.wantErr)
+			}
+		})
 	}
 }
 
