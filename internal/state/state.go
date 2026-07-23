@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -57,7 +58,7 @@ func New(root string) (*Dir, error) {
 	}
 
 	d := &Dir{Root: filepath.Clean(absRoot)}
-	for _, rel := range []string{"admin", "tls", filepath.Join("tls", "uploaded")} {
+	for _, rel := range []string{"admin", "tls", filepath.Join("tls", "uploaded"), "metrics"} {
 		path, err := d.resolve(rel)
 		if err != nil {
 			return nil, err

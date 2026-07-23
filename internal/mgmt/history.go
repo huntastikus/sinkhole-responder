@@ -61,6 +61,26 @@ func (h *History) Series(rng string) []Sample {
 	return h.fine.snapshot()
 }
 
+func (h *History) dump() (fine, coarse []Sample) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.fine.snapshot(), h.coarse.snapshot()
+}
+
+func (h *History) restore(fine, coarse []Sample) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	h.fine = newSampleRing(fineCapacity)
+	for _, sample := range fine {
+		h.fine.append(sample)
+	}
+	h.coarse = newSampleRing(coarseCapacity)
+	for _, sample := range coarse {
+		h.coarse.append(sample)
+	}
+}
+
 // RunSampler records a fine sample on each tick and a coarse aggregate after
 // each accumulated minute of fine intervals. It returns when ctx is canceled.
 func RunSampler(ctx context.Context, m *Metrics, h *History, fine time.Duration) {
