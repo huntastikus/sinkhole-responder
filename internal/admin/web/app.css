@@ -681,10 +681,6 @@ h1 {
   stroke-width: 1;
 }
 
-.spark-area {
-  fill: url(#spark-gradient);
-}
-
 /* Gradient stops via CSS: var() does not resolve in SVG presentation attributes. */
 .spark-stop-top {
   stop-color: var(--accent);
