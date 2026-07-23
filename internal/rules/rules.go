@@ -104,12 +104,12 @@ func compileRule(rule Rule, configDir string) (compiledRule, error) {
 		}
 	}
 	if rule.HostGlob != "" {
-		if _, err := path.Match(rule.HostGlob, "x"); err != nil {
+		if err := validateGlob(rule.HostGlob); err != nil {
 			return compiledRule{}, fmt.Errorf("invalid host_glob %q: %w", rule.HostGlob, err)
 		}
 	}
 	if rule.PathGlob != "" {
-		if _, err := path.Match(rule.PathGlob, "x"); err != nil {
+		if err := validateGlob(rule.PathGlob); err != nil {
 			return compiledRule{}, fmt.Errorf("invalid path_glob %q: %w", rule.PathGlob, err)
 		}
 	}
@@ -135,6 +135,21 @@ func compileRule(rule Rule, configDir string) (compiledRule, error) {
 	}
 
 	return compiled, nil
+}
+
+// validateGlob reports whether every non-"**" segment of pattern is a valid
+// path.Match pattern. path.Match alone can miss a bad segment that sits after
+// a segment which already failed to match, so each segment is checked.
+func validateGlob(pattern string) error {
+	for _, segment := range strings.Split(pattern, "/") {
+		if segment == "**" {
+			continue
+		}
+		if _, err := path.Match(segment, "x"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func compileBody(response Response, configDir string) ([]byte, bool, string, error) {

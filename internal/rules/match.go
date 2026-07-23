@@ -83,8 +83,7 @@ func (rule *compiledRule) matches(r *http.Request, host string, query url.Values
 	// Host glob patterns are matched against the normalized ASCII/punycode host;
 	// pattern authors should write punycode or ASCII globs.
 	if rule.hostGlob != "" {
-		matched, _ := path.Match(rule.hostGlob, host)
-		if !matched {
+		if !globMatch(rule.hostGlob, host) {
 			return false
 		}
 	}
@@ -94,8 +93,7 @@ func (rule *compiledRule) matches(r *http.Request, host string, query url.Values
 		requestPath = r.URL.Path
 	}
 	if rule.pathGlob != "" {
-		matched, _ := path.Match(rule.pathGlob, requestPath)
-		if !matched {
+		if !globMatch(rule.pathGlob, requestPath) {
 			return false
 		}
 	}
@@ -124,6 +122,49 @@ func (rule *compiledRule) matches(r *http.Request, host string, query url.Values
 		}
 	}
 	return true
+}
+
+// globMatch matches name against pattern using path.Match semantics, extended
+// so a standalone "**" segment matches zero or more path segments. A "**"
+// embedded inside a segment (for example "a**b") is not special and keeps
+// plain path.Match behavior.
+func globMatch(pattern, name string) bool {
+	if !hasDoublestarSegment(pattern) {
+		matched, _ := path.Match(pattern, name)
+		return matched
+	}
+	return matchSegments(strings.Split(pattern, "/"), strings.Split(name, "/"))
+}
+
+func hasDoublestarSegment(pattern string) bool {
+	for _, segment := range strings.Split(pattern, "/") {
+		if segment == "**" {
+			return true
+		}
+	}
+	return false
+}
+
+func matchSegments(pattern, name []string) bool {
+	if len(pattern) == 0 {
+		return len(name) == 0
+	}
+	if pattern[0] == "**" {
+		for skip := 0; skip <= len(name); skip++ {
+			if matchSegments(pattern[1:], name[skip:]) {
+				return true
+			}
+		}
+		return false
+	}
+	if len(name) == 0 {
+		return false
+	}
+	matched, err := path.Match(pattern[0], name[0])
+	if err != nil || !matched {
+		return false
+	}
+	return matchSegments(pattern[1:], name[1:])
 }
 
 func normalizeHost(raw string) string {
