@@ -17,6 +17,7 @@
           <h1>Sinkhole Responder</h1>
           <span class="live-indicator"><span class="live-dot" aria-hidden="true"></span>Live</span>
         </div>
+        <span id="stats-updated" class="section-help" aria-live="polite">Waiting for first update</span>
       </div>
       <p id="banner" class="banner" role="alert" hidden></p>
     </header>
@@ -63,12 +64,50 @@
       <article class="chart-card">
         <header class="chart-header">
           <div>
-            <p class="chart-kicker">Last 5 minutes</p>
+            <p id="history-kicker" class="chart-kicker">Last 5 minutes</p>
             <h2>Requests per second</h2>
           </div>
-          <p class="chart-note">Live rate</p>
+          <div class="range-toggle" role="group" aria-label="History range">
+            <button type="button" data-history-range="5m" aria-pressed="true">5m</button>
+            <button type="button" data-history-range="3h" aria-pressed="false">3h</button>
+          </div>
         </header>
         <div id="sparkline" class="chart" role="img" aria-label="Requests per second history loading"></div>
+      </article>
+
+      <article class="chart-card">
+        <header class="chart-header">
+          <div>
+            <p class="chart-kicker">Certificate cache</p>
+            <h2>Leaf-cache entries</h2>
+          </div>
+          <p class="chart-note">Selected range</p>
+        </header>
+        <div id="leaf-cache-chart" class="chart" role="img" aria-label="Leaf-cache history loading"></div>
+      </article>
+
+      <article class="chart-card">
+        <header class="chart-header">
+          <div>
+            <p class="chart-kicker">Traffic mix</p>
+            <h2>Requests by kind &amp; status</h2>
+          </div>
+          <p class="chart-note">All requests</p>
+        </header>
+        <div class="breakdown-columns">
+          <section>
+            <h3>By kind</h3>
+            <div id="kind-breakdown" class="breakdown-list" role="list">
+              <p class="breakdown-empty">No requests yet.</p>
+            </div>
+          </section>
+          <section>
+            <h3>By status</h3>
+            <div id="status-breakdown" class="breakdown-list" role="list">
+              <p class="breakdown-empty">No requests yet.</p>
+            </div>
+          </section>
+        </div>
       </article>
 
       <article class="chart-card">

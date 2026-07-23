@@ -13,6 +13,7 @@ let historyInterval;
 let stopped = false;
 let statsLoading = false;
 let historyLoading = false;
+let historyRange = "5m";
 let gaugeNodes;
 let latencyNodes;
 
@@ -105,6 +106,21 @@ export function stackLayout(byStatusClass) {
   }));
 }
 
+export function kindBreakdown(map) {
+  const rows = map && typeof map === "object"
+    ? Object.entries(map).map(([kind, value]) => {
+      const parsed = Number(value);
+      return { kind, count: Number.isFinite(parsed) ? Math.max(0, parsed) : 0 };
+    })
+    : [];
+  rows.sort((a, b) => b.count - a.count);
+  const total = rows.reduce((sum, row) => sum + row.count, 0);
+  return rows.map((row) => ({
+    ...row,
+    fraction: total === 0 ? 0 : row.count / total,
+  }));
+}
+
 function polarPoint(cx, cy, r, degrees) {
   const radians = degrees * Math.PI / 180;
   return {
@@ -172,6 +188,43 @@ function setMetric(name, value) {
   }
 }
 
+function drawBreakdown(kindMap, statusMap) {
+  for (const [containerID, map] of [
+    ["kind-breakdown", kindMap],
+    ["status-breakdown", statusMap],
+  ]) {
+    const container = document.getElementById(containerID);
+    const rows = kindBreakdown(map);
+    if (rows.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "breakdown-empty";
+      empty.textContent = "No requests yet.";
+      container.replaceChildren(empty);
+      continue;
+    }
+
+    const fragment = document.createDocumentFragment();
+    for (const row of rows) {
+      const item = document.createElement("div");
+      item.className = "breakdown-row";
+      item.setAttribute("role", "listitem");
+      const label = document.createElement("span");
+      label.className = "breakdown-label";
+      label.textContent = row.kind;
+      const bar = document.createElement("span");
+      bar.className = "breakdown-bar";
+      bar.style.width = `${row.fraction * 100}%`;
+      bar.setAttribute("aria-hidden", "true");
+      const count = document.createElement("span");
+      count.className = "breakdown-count";
+      count.textContent = integerFormatter.format(row.count);
+      item.append(label, bar, count);
+      fragment.append(item);
+    }
+    container.replaceChildren(fragment);
+  }
+}
+
 function drawGauge(rps) {
   const container = document.getElementById("gauge");
   peakRPS = Math.max(peakRPS, rps, 1);
@@ -207,12 +260,10 @@ function drawGauge(rps) {
   );
 }
 
-function drawSparkline(samples) {
-  const container = document.getElementById("sparkline");
-  const values = samples.map((sample) => Number(sample.rps) || 0);
+function drawSparklineInto(container, values, ariaLabelPrefix) {
   if (values.length === 0) {
     drawEmptyChart(container, "Waiting for history samples");
-    container.setAttribute("aria-label", "Requests per second history has no samples yet");
+    container.setAttribute("aria-label", `${ariaLabelPrefix} history has no samples yet`);
     return;
   }
 
@@ -221,7 +272,8 @@ function drawSparkline(samples) {
   const pad = 18;
   const svg = chartSVG(`0 0 ${width} ${height}`);
   const defs = svgElement("defs");
-  const gradient = svgElement("linearGradient", { id: "spark-gradient", x1: 0, y1: 0, x2: 0, y2: 1 });
+  const gradientID = `${container.id}-gradient`;
+  const gradient = svgElement("linearGradient", { id: gradientID, x1: 0, y1: 0, x2: 0, y2: 1 });
   gradient.append(
     svgElement("stop", { offset: "0%", class: "spark-stop-top" }),
     svgElement("stop", { offset: "100%", class: "spark-stop-bottom" }),
@@ -231,10 +283,12 @@ function drawSparkline(samples) {
   for (const y of [pad, height / 2, height - pad]) {
     svg.append(svgElement("line", { x1: pad, y1: y, x2: width - pad, y2: y, class: "chart-grid-line" }));
   }
-  svg.append(svgElement("path", {
+  const area = svgElement("path", {
     d: areaPath(values, width, height, pad),
     class: "spark-area",
-  }));
+  });
+  area.style.fill = `url(#${gradientID})`;
+  svg.append(area);
   const points = scaledPoints(values, width, height, pad);
   const linePath = points.map((point, index) => `${index === 0 ? "M" : "L"} ${number(point.x)} ${number(point.y)}`).join(" ");
   svg.append(svgElement("path", { d: linePath, class: "spark-line" }));
@@ -244,7 +298,7 @@ function drawSparkline(samples) {
   const peak = Math.max(...values);
   container.setAttribute(
     "aria-label",
-    `Requests per second over ${values.length} samples; latest ${rateFormatter.format(latest)}, peak ${rateFormatter.format(peak)}`,
+    `${ariaLabelPrefix} over ${values.length} samples; latest ${rateFormatter.format(latest)}, peak ${rateFormatter.format(peak)}`,
   );
 }
 
@@ -428,6 +482,8 @@ async function refreshStats() {
     setMetric("version", version);
     drawGauge(rps);
     drawLatency(stats.duration);
+    drawBreakdown(stats.requests_by_kind, stats.requests_by_status);
+    document.getElementById("stats-updated").textContent = `Updated ${new Date().toLocaleTimeString()}`;
 
     document.getElementById("sr-summary").textContent =
       `${integerFormatter.format(requests)} requests total, ${rateFormatter.format(rps)} requests per second, ` +
@@ -450,13 +506,23 @@ async function refreshHistory() {
     return;
   }
   historyLoading = true;
+  const requestedRange = historyRange;
   try {
-    const history = await requestJSON("/api/stats/history?range=5m");
-    if (stopped) {
+    const history = await requestJSON(`/api/stats/history?range=${requestedRange}`);
+    if (stopped || requestedRange !== historyRange) {
       return;
     }
     const samples = Array.isArray(history.samples) ? history.samples : [];
-    drawSparkline(samples);
+    drawSparklineInto(
+      document.getElementById("sparkline"),
+      samples.map((sample) => Number(sample.rps) || 0),
+      "Requests per second",
+    );
+    drawSparklineInto(
+      document.getElementById("leaf-cache-chart"),
+      samples.map((sample) => Number(sample.leaf_cache) || 0),
+      "Leaf-cache entries",
+    );
     drawStatusStack(samples);
     hideBanner(document.getElementById("banner"));
   } catch (error) {
@@ -467,6 +533,9 @@ async function refreshHistory() {
     }
   } finally {
     historyLoading = false;
+    if (!stopped && requestedRange !== historyRange) {
+      void refreshHistory();
+    }
   }
 }
 
@@ -481,6 +550,21 @@ function stopWithSessionError() {
 }
 
 function main() {
+  for (const button of document.querySelectorAll("[data-history-range]")) {
+    button.addEventListener("click", () => {
+      const nextRange = button.dataset.historyRange;
+      if (nextRange === historyRange || !["5m", "3h"].includes(nextRange)) {
+        return;
+      }
+      historyRange = nextRange;
+      for (const rangeButton of document.querySelectorAll("[data-history-range]")) {
+        rangeButton.setAttribute("aria-pressed", String(rangeButton.dataset.historyRange === historyRange));
+      }
+      document.getElementById("history-kicker").textContent =
+        historyRange === "3h" ? "Last 3 hours" : "Last 5 minutes";
+      void refreshHistory();
+    });
+  }
   statsInterval = window.setInterval(refreshStats, 1500);
   historyInterval = window.setInterval(refreshHistory, 5000);
   void refreshStats();

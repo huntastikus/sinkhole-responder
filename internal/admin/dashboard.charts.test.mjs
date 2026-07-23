@@ -4,6 +4,7 @@ import {
   areaPath,
   describeArc,
   formatUptime,
+  kindBreakdown,
   percentileFromBuckets,
   stackLayout,
 } from "./web/dashboard.js";
@@ -74,6 +75,18 @@ test("stackLayout preserves status order and fractions", () => {
   const empty = stackLayout({ "2xx": 0, "3xx": 0, "4xx": 0, "5xx": 0 });
   assert.ok(empty.every(({ fraction }) => fraction === 0));
   assert.ok(empty.every(({ fraction }) => !Number.isNaN(fraction)));
+});
+
+test("kindBreakdown sorts by count and computes fractions", () => {
+  const rows = kindBreakdown({ script: 6, image: 3, beacon: 1 });
+  assert.deepEqual(rows.map((r) => r.kind), ["script", "image", "beacon"]);
+  assert.equal(rows[0].count, 6);
+  assert.ok(Math.abs(rows[0].fraction - 0.6) < 1e-9);
+});
+
+test("kindBreakdown handles empty and garbage input", () => {
+  assert.deepEqual(kindBreakdown(undefined), []);
+  assert.deepEqual(kindBreakdown({ a: "x" }), [{ kind: "a", count: 0, fraction: 0 }]);
 });
 
 if (failures > 0) {
