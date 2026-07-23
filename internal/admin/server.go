@@ -300,8 +300,8 @@ func newAdminHTTPServer(handler http.Handler) *http.Server {
 }
 
 func (s *Server) page(name string) http.HandlerFunc {
-	return func(w http.ResponseWriter, _ *http.Request) {
-		s.serveWebPage(w, name)
+	return func(w http.ResponseWriter, r *http.Request) {
+		s.serveWebPage(w, r, name)
 	}
 }
 
@@ -316,7 +316,7 @@ func assetsHandler(web fs.FS) http.Handler {
 	})
 }
 
-func (s *Server) serveWebPage(w http.ResponseWriter, name string) {
+func (s *Server) serveWebPage(w http.ResponseWriter, r *http.Request, name string) {
 	page, err := fs.ReadFile(s.web, name)
 	if err != nil {
 		s.logger.Error("read embedded admin page", "name", name, "error", err)
@@ -325,6 +325,12 @@ func (s *Server) serveWebPage(w http.ResponseWriter, name string) {
 	}
 	footer := `<footer class="app-footer"><span>` + template.HTMLEscapeString(s.displayVersion) + `</span></footer>`
 	html := strings.Replace(string(page), "</head>", "  "+faviconLink+"\n</head>", 1)
+	if cookie, cookieErr := r.Cookie("sr_theme"); cookieErr == nil {
+		switch cookie.Value {
+		case "light", "dark":
+			html = strings.Replace(html, `<html lang="en">`, `<html lang="en" data-theme="`+cookie.Value+`">`, 1)
+		}
+	}
 	html = strings.Replace(html, "<body>", "<body class=\"admin-body\">", 1)
 	if strings.Contains(html, "</nav>") {
 		html = strings.Replace(html, "</nav>", "</nav>\n  "+systemHealthAlert, 1)

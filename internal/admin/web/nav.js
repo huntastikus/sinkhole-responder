@@ -2,7 +2,7 @@
 
 import { readCookie } from "./api.js";
 
-// note: CSP prevents an inline head script, so a stored theme may briefly flash before this module loads.
+// localStorage is authoritative; the cookie lets the server stamp the theme before this module loads.
 
 const navigationLinks = [
   ["Dashboard", "/"],
@@ -23,6 +23,18 @@ function storedTheme() {
     return theme === "light" || theme === "dark" ? theme : "";
   } catch {
     return "";
+  }
+}
+
+function syncThemeCookie(theme) {
+  try {
+    if (theme === "light" || theme === "dark") {
+      document.cookie = `sr_theme=${theme}; Path=/; Max-Age=31536000; SameSite=Strict`;
+    } else {
+      document.cookie = "sr_theme=; Path=/; Max-Age=0; SameSite=Strict";
+    }
+  } catch {
+    // Theme selection still works when cookies are unavailable.
   }
 }
 
@@ -215,6 +227,10 @@ function main() {
   const selectedTheme = storedTheme();
   if (selectedTheme) {
     document.documentElement.dataset.theme = selectedTheme;
+    syncThemeCookie(selectedTheme);
+  } else {
+    delete document.documentElement.dataset.theme;
+    syncThemeCookie("");
   }
 
   const inner = document.createElement("div");
@@ -268,6 +284,7 @@ function main() {
     } catch {
       // The selected theme still applies for this page when storage is unavailable.
     }
+    syncThemeCookie(theme);
     updateThemeButton(themeButton);
   });
 

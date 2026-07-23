@@ -47,7 +47,13 @@
         <section id="ca-status" class="status-block" aria-labelledby="ca-status-heading" hidden>
           <h3 id="ca-status-heading">Certificate authority</h3>
           <dl class="status-list status-list-compact">
-            <div><dt>Fingerprint</dt><dd><code id="ca-fingerprint"></code></dd></div>
+            <div>
+              <dt>Fingerprint</dt>
+              <dd class="fingerprint-copy">
+                <code id="ca-fingerprint"></code>
+                <button id="copy-ca-fingerprint" class="button button-small copy-button" type="button" aria-live="polite">Copy</button>
+              </dd>
+            </div>
             <div><dt>Subject</dt><dd id="ca-subject"></dd></div>
             <div><dt>Expires</dt><dd id="ca-not-after"></dd></div>
           </dl>
@@ -120,7 +126,10 @@
         <section id="generated-ca-result" class="action-result" aria-labelledby="generated-result-heading" hidden>
           <h3 id="generated-result-heading">CA generated</h3>
           <p>SHA-256 fingerprint</p>
-          <code id="generated-fingerprint" class="fingerprint"></code>
+          <div class="fingerprint-copy">
+            <code id="generated-fingerprint" class="fingerprint"></code>
+            <button id="copy-generated-fingerprint" class="button button-small copy-button" type="button" aria-live="polite">Copy</button>
+          </div>
           <div class="result-actions">
             <a class="button" href="/api/ca/download" download="sinkhole-ca.crt">Download CA certificate</a>
             <button id="activate-local-ca" class="button button-primary" type="button">Activate (use as local-CA now)</button>
@@ -158,7 +167,13 @@
           <h3 id="uploaded-result-heading">Certificate uploaded</h3>
           <dl class="status-list status-list-compact">
             <div><dt>Hosts</dt><dd id="uploaded-hosts"></dd></div>
-            <div><dt>Fingerprint</dt><dd><code id="uploaded-fingerprint"></code></dd></div>
+            <div>
+              <dt>Fingerprint</dt>
+              <dd class="fingerprint-copy">
+                <code id="uploaded-fingerprint"></code>
+                <button id="copy-uploaded-fingerprint" class="button button-small copy-button" type="button" aria-live="polite">Copy</button>
+              </dd>
+            </div>
           </dl>
           <div class="result-actions">
             <button id="activate-static" class="button button-primary" type="button">Activate (static)</button>

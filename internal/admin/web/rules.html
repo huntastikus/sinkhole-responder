@@ -14,7 +14,11 @@
       <div>
         <p class="eyebrow">Response routing</p>
         <h1>Rule builder</h1>
-        <p class="settings-intro">Define which requests get a specific placeholder response, then test the active rules without making a network request.</p>
+        <p class="settings-intro">
+          Define which requests get a specific placeholder response, then test the active rules without making a network request.
+          <a class="text-link" href="/rulepacks">Browse curated rulepacks →</a>
+          <a class="text-link" href="/tools/detector">Verify with the detector →</a>
+        </p>
       </div>
     </header>
 
@@ -35,6 +39,7 @@
         <ol id="rule-list" class="rule-list"></ol>
         <div class="form-actions rule-list-actions">
           <button id="save-rules" class="button button-primary" type="button">Save rules</button>
+          <span id="unsaved-badge" class="unsaved-badge" role="status" hidden>Unsaved changes</span>
           <p id="rules-error" class="form-error" aria-live="polite"></p>
         </div>
       </section>

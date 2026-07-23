@@ -312,6 +312,20 @@ func TestRulesAPIReordersRules(t *testing.T) {
 	if len(written.Rules) != 2 || written.Rules[0].Name != "second" || written.Rules[1].Name != "first" {
 		t.Errorf("written rule names = %#v, want [second first]", written.Rules)
 	}
+	getResponse := performJSONRequest(t, fixture.server, http.MethodGet, "/api/rules", nil)
+	if getResponse.Code != http.StatusOK {
+		t.Fatalf("follow-up GET status = %d, want %d; body = %q", getResponse.Code, http.StatusOK, getResponse.Body.String())
+	}
+	var got rulesResponse
+	decodeJSON(t, getResponse, &got)
+	if len(got.Rules) != 2 {
+		t.Fatalf("follow-up GET returned %d rules, want 2", len(got.Rules))
+	}
+	first, firstOK := got.Rules[0].(map[string]any)
+	second, secondOK := got.Rules[1].(map[string]any)
+	if !firstOK || !secondOK || first["name"] != "second" || second["name"] != "first" {
+		t.Errorf("follow-up GET rules = %#v, want [second first]", got.Rules)
+	}
 	if fixture.reloadCalls != 1 {
 		t.Errorf("reload calls = %d, want 1", fixture.reloadCalls)
 	}

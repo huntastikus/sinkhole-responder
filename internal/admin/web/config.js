@@ -7,6 +7,27 @@ const TLS_MODES = new Set(["disabled", "static", "local-ca"]);
 let currentConfig;
 let configMtime = 0;
 let rawMtime = 0;
+let dirty = false;
+
+export function setDirty(next) {
+  dirty = next;
+  const badge = document.getElementById("unsaved-badge");
+  if (badge) {
+    badge.hidden = !next;
+  }
+}
+
+export function isDirty() {
+  return dirty;
+}
+
+function handleBeforeUnload(event) {
+  if (!dirty) {
+    return;
+  }
+  event.preventDefault();
+  event.returnValue = "";
+}
 
 export function setByPath(target, path, value) {
   const parts = path.split(".");
@@ -480,6 +501,7 @@ async function loadConfig(announce = false) {
     document.getElementById("raw-error").textContent = "";
     hideBanner(document.getElementById("config-banner"));
     document.getElementById("reload-config").hidden = true;
+    setDirty(false);
     if (announce) {
       showToast(document.getElementById("success-toast"), "Configuration reloaded from disk.");
     }
@@ -517,6 +539,7 @@ async function saveConfig(event) {
     ]);
     rawMtime = raw.mtime;
     document.getElementById("raw-config").value = raw.raw;
+    setDirty(false);
     renderBackups(backups.backups);
     if (result.restart_required) {
       window.dispatchEvent(new Event("sinkhole:restart-check"));
@@ -574,6 +597,9 @@ async function importConfig(event) {
   if (fileInput.files.length === 0) {
     importError.textContent = "Choose a YAML configuration file to import.";
     fileInput.focus();
+    return;
+  }
+  if (!window.confirm("Importing replaces the entire configuration. The current config is backed up automatically first. Continue?")) {
     return;
   }
 
@@ -641,6 +667,7 @@ function addListener(kind) {
   const values = collectListeners(kind);
   values.push("");
   renderListeners(kind, values);
+  setDirty(true);
   document.querySelectorAll(`[data-listener="${kind}"]`)[values.length - 1].focus();
 }
 
@@ -648,6 +675,7 @@ function addStaticCert() {
   const certs = collectStaticCerts();
   certs.push({ hosts: [], cert_file: "", key_file: "" });
   renderStaticCerts(certs);
+  setDirty(true);
   document.querySelectorAll('[data-cert-field="hosts"]')[certs.length - 1].focus();
 }
 
@@ -659,6 +687,7 @@ function handleRepeatListClick(event) {
     const index = [...document.querySelectorAll(`[data-remove-listener="${kind}"]`)].indexOf(listenerButton);
     values.splice(index, 1);
     renderListeners(kind, values);
+    setDirty(true);
     return;
   }
   const certButton = event.target.closest("[data-remove-cert]");
@@ -666,6 +695,7 @@ function handleRepeatListClick(event) {
     const certs = collectStaticCerts();
     certs.splice(Number(certButton.dataset.removeCert), 1);
     renderStaticCerts(certs);
+    setDirty(true);
   }
 }
 
@@ -676,7 +706,9 @@ function toggleRawEdit() {
 }
 
 function main() {
-  document.getElementById("config-form").addEventListener("submit", saveConfig);
+  const configForm = document.getElementById("config-form");
+  configForm.addEventListener("submit", saveConfig);
+  configForm.addEventListener("input", () => setDirty(true));
   document.getElementById("import-config-form").addEventListener("submit", importConfig);
   document.getElementById("password-form").addEventListener("submit", changePassword);
   document.getElementById("tls-mode").addEventListener("change", updateTLSVisibility);
@@ -688,7 +720,9 @@ function main() {
   for (const button of document.querySelectorAll("[data-add-listener]")) {
     button.addEventListener("click", () => addListener(button.dataset.addListener));
   }
-  document.getElementById("config-form").addEventListener("click", handleRepeatListClick);
+  document.getElementById("raw-config").addEventListener("input", () => setDirty(true));
+  configForm.addEventListener("click", handleRepeatListClick);
+  window.addEventListener("beforeunload", handleBeforeUnload);
   void loadConfig();
 }
 

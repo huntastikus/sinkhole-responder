@@ -10,6 +10,27 @@ let draggedIndex = null;
 let pairSequence = 0;
 let lastEditorTrigger = null;
 let previewSeq = 0;
+let dirty = false;
+
+export function setDirty(next) {
+  dirty = next;
+  const badge = document.getElementById("unsaved-badge");
+  if (badge) {
+    badge.hidden = !next;
+  }
+}
+
+export function isDirty() {
+  return dirty;
+}
+
+function handleBeforeUnload(event) {
+  if (!dirty) {
+    return;
+  }
+  event.preventDefault();
+  event.returnValue = "";
+}
 
 export function summarizeRule(rule) {
   const matchers = [];
@@ -181,6 +202,7 @@ async function persistRules(message = "Rules saved and reloaded.") {
       body: JSON.stringify({ rules, mtime: rulesMtime }),
     });
     rulesMtime = result.mtime;
+    setDirty(false);
     document.getElementById("rules-status").textContent = message;
     return true;
   } catch (error) {
@@ -195,11 +217,36 @@ async function moveRule(from, to) {
   if (from < 0 || to < 0 || from >= rules.length || to >= rules.length || from === to) {
     return;
   }
-  const [rule] = rules.splice(from, 1);
-  rules.splice(to, 0, rule);
-  renderRuleList();
-  await persistRules(`Moved ${rule.name || "rule"} to position ${to + 1}.`);
-  document.querySelector(`[data-rule-action="edit"][data-rule-index="${to}"]`)?.focus();
+  if (dirty) {
+    document.getElementById("rules-status").textContent = "Save pending rule edits before reordering.";
+    document.getElementById("save-rules").focus();
+    return;
+  }
+
+  const order = Array.from({ length: rules.length }, (_value, index) => index);
+  const [movedIndex] = order.splice(from, 1);
+  order.splice(to, 0, movedIndex);
+  const rule = rules[from];
+  setRulesBusy(true);
+  document.getElementById("rules-error").textContent = "";
+  hideBanner(document.getElementById("rules-banner"));
+  document.getElementById("reload-rules").hidden = true;
+  try {
+    const result = await requestJSON("/api/rules/reorder", {
+      method: "POST",
+      body: JSON.stringify({ order, mtime: rulesMtime }),
+    });
+    rulesMtime = result.mtime;
+    const [movedRule] = rules.splice(from, 1);
+    rules.splice(to, 0, movedRule);
+    renderRuleList();
+    document.getElementById("rules-status").textContent = `Moved ${rule.name || "rule"} to position ${to + 1}.`;
+    document.querySelector(`[data-rule-action="edit"][data-rule-index="${to}"]`)?.focus();
+  } catch (error) {
+    showSaveError(error);
+  } finally {
+    setRulesBusy(false);
+  }
 }
 
 function pairRow(kind, key, value) {
@@ -418,6 +465,7 @@ function applyRule(event) {
       rules[editingIndex] = rule;
     }
     renderRuleList();
+    setDirty(true);
     document.getElementById("rule-editor").hidden = true;
     editingIndex = null;
     document.getElementById("rules-status").textContent = "Rule updated in the editor. Save rules to apply it.";
@@ -443,6 +491,7 @@ function handleRuleListClick(event) {
     if (window.confirm(`Delete ${name}? The change is not applied until you save.`)) {
       rules.splice(index, 1);
       renderRuleList();
+      setDirty(true);
       document.getElementById("rules-status").textContent = `${name} removed. Save rules to apply the change.`;
       document.getElementById("add-rule").focus();
     }
@@ -467,6 +516,7 @@ async function loadRules(announce = false) {
     assetNames = Array.isArray(assetData.assets) ? assetData.assets : [];
     renderRuleList();
     populateAssetSelect();
+    setDirty(false);
     document.getElementById("rules-error").textContent = "";
     document.getElementById("rule-editor").hidden = true;
     hideBanner(document.getElementById("rules-banner"));
@@ -546,6 +596,7 @@ function main() {
   }
   document.getElementById("preview-form").addEventListener("submit", runPreview);
   document.getElementById("preview-form").addEventListener("change", () => void runPreview());
+  window.addEventListener("beforeunload", handleBeforeUnload);
   void loadRules();
 }
 

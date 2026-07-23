@@ -5,6 +5,27 @@ import { SessionExpiredError, hideBanner, requestJSON, showBanner } from "./api.
 const refreshIntervalMS = 3000;
 let refreshTimer;
 let loading = false;
+let lastRecords = [];
+let lastRenderedRecordsJSON = "";
+let searchTimer;
+
+export function filterRecords(records, query) {
+  const normalized = String(query || "").trim().toLowerCase();
+  const source = Array.isArray(records) ? records : [];
+  if (normalized === "") {
+    return source;
+  }
+  return source.filter((record) => {
+    let attributes = "";
+    try {
+      attributes = JSON.stringify(record?.attrs) || "";
+    } catch {
+      attributes = "";
+    }
+    return String(record?.msg || "").toLowerCase().includes(normalized)
+      || attributes.toLowerCase().includes(normalized);
+  });
+}
 
 async function requestLogs() {
   const level = document.getElementById("logs-level").value;
@@ -84,6 +105,26 @@ function renderRecords(records) {
   }
 }
 
+function updateStatus(shown, total) {
+  document.getElementById("logs-status").textContent = `${shown} of ${total} records · newest first`;
+}
+
+function renderLastRecords(recordsJSON = JSON.stringify(lastRecords)) {
+  const shown = filterRecords(lastRecords, document.getElementById("logs-search").value);
+  renderRecords(shown);
+  lastRenderedRecordsJSON = recordsJSON;
+  updateStatus(shown.length, lastRecords.length);
+}
+
+function hasSelectedTableText() {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) {
+    return false;
+  }
+  const table = document.querySelector(".data-table-logs");
+  return table.contains(selection.anchorNode) || table.contains(selection.focusNode);
+}
+
 function stopAutoRefresh() {
   window.clearInterval(refreshTimer);
   refreshTimer = undefined;
@@ -98,9 +139,21 @@ async function loadLogs() {
   loading = true;
   try {
     const records = await requestLogs();
-    renderRecords(records);
+    const recordsJSON = JSON.stringify(records);
+    lastRecords = records;
+    // ponytail: serialize-compare, DOM diffing when it matters
+    if (recordsJSON !== lastRenderedRecordsJSON) {
+      if (hasSelectedTableText()) {
+        document.getElementById("logs-status").textContent = "refresh paused — text selected";
+        hideBanner(document.getElementById("logs-banner"));
+        return;
+      }
+      renderLastRecords(recordsJSON);
+    } else {
+      const shown = filterRecords(lastRecords, document.getElementById("logs-search").value);
+      updateStatus(shown.length, lastRecords.length);
+    }
     hideBanner(document.getElementById("logs-banner"));
-    document.getElementById("logs-status").textContent = `${records.length} record${records.length === 1 ? "" : "s"} · newest first`;
   } catch (error) {
     if (error instanceof SessionExpiredError) {
       stopAutoRefresh();
@@ -120,6 +173,18 @@ function startAutoRefresh() {
   refreshTimer = window.setInterval(() => void loadLogs(), refreshIntervalMS);
 }
 
+function downloadLogs() {
+  const blob = new Blob([JSON.stringify(lastRecords, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `sinkhole-logs-${new Date().toISOString()}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function main() {
   const autoRefresh = document.getElementById("logs-auto-refresh");
   autoRefresh.addEventListener("change", () => {
@@ -132,6 +197,11 @@ function main() {
   });
   document.getElementById("logs-level").addEventListener("change", () => void loadLogs());
   document.getElementById("logs-limit").addEventListener("change", () => void loadLogs());
+  document.getElementById("logs-search").addEventListener("input", () => {
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => renderLastRecords(), 150);
+  });
+  document.getElementById("logs-download").addEventListener("click", downloadLogs);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
       void loadLogs();
@@ -142,4 +212,6 @@ function main() {
   startAutoRefresh();
 }
 
-document.addEventListener("DOMContentLoaded", main);
+if (typeof document !== "undefined") {
+  document.addEventListener("DOMContentLoaded", main);
+}
