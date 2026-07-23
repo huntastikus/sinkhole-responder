@@ -20,6 +20,18 @@ bind unless `management.allow_external: true` is explicit.
 The Compose deployment publishes management to host loopback only. Do not put
 this listener on the public request ports.
 
+The admin JSON stats can also be queried by automation with the read-only token
+generated on the Tools page:
+
+```sh
+curl -H 'Authorization: Bearer srt_…' \
+  http://127.0.0.1:8080/api/stats
+```
+
+The same token can read `/api/stats/history`, `/api/system/health`, and
+`/api/logs`; it cannot mutate admin state. Prefer HTTPS when the admin listener
+is accessed across a network.
+
 ## Application and access logs
 
 Logs are structured JSON on standard output. Access records include:
@@ -77,4 +89,3 @@ Configure logging through the admin UI, YAML, or the environment variables in
 the [configuration reference](configuration.md).
 
 [Back to the documentation index](README.md)
-

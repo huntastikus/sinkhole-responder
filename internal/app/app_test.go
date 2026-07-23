@@ -259,6 +259,70 @@ func TestRunStartsSamplerWhenAdminEnabled(t *testing.T) {
 	}
 }
 
+func TestRunRestoresPersistedMetricsAcrossRestart(t *testing.T) {
+	cfg := testConfig(t)
+	cfg.StateDir = t.TempDir()
+	cfg.Admin = config.AdminConfig{
+		Enabled:    true,
+		Listen:     reservedTCPAddress(t, "127.0.0.1"),
+		SessionTTL: time.Hour,
+		LoginBurst: 5,
+	}
+	cfg.Rules = []rules.Rule{{
+		Name:     "persisted-rule",
+		PathGlob: "/persisted",
+		Response: rules.Response{Status: http.StatusNoContent},
+	}}
+
+	runOnce := func(request bool) {
+		ctx, cancel := context.WithCancel(context.Background())
+		ready := make(chan []net.Addr, 1)
+		done := make(chan error, 1)
+		go func() {
+			done <- Run(ctx, cfg, "test", discardLogger(), nil, nil, WithReadyFunc(func(addrs []net.Addr) {
+				ready <- addrs
+			}))
+		}()
+		baseURL := readyURL(t, ready, done)
+		if request {
+			response, err := http.Get(baseURL + "/persisted")
+			if err != nil {
+				t.Fatal(err)
+			}
+			response.Body.Close()
+			if response.StatusCode != http.StatusNoContent {
+				t.Fatalf("status = %d, want %d", response.StatusCode, http.StatusNoContent)
+			}
+		}
+		cancel()
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Fatalf("Run() = %v", err)
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatal("Run did not return within 3 seconds")
+		}
+	}
+
+	runOnce(true)
+	runOnce(false)
+
+	data, err := os.ReadFile(filepath.Join(cfg.StateDir, "metrics", "state.json"))
+	if err != nil {
+		t.Fatalf("read persisted metrics: %v", err)
+	}
+	metrics := mgmt.NewMetrics("verification")
+	history := mgmt.NewHistory()
+	if err := mgmt.RestoreState(metrics, history, data); err != nil {
+		t.Fatalf("restore persisted metrics: %v", err)
+	}
+	snapshot := metrics.Snapshot()
+	if snapshot.RequestsTotal != 1 || snapshot.RequestsByRule["persisted-rule"] != 1 {
+		t.Fatalf("restored snapshot = %+v, want one persisted rule request", snapshot)
+	}
+}
+
 func TestRunSkipsSamplerWhenAdminDisabled(t *testing.T) {
 	cfg := testConfig(t)
 	h := mgmt.NewHistory()

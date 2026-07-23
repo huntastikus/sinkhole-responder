@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/huntastikus/sinkhole-responder/internal/app"
 	"github.com/huntastikus/sinkhole-responder/internal/config"
@@ -90,6 +92,8 @@ func run() int {
 			}
 		}
 	}()
+	// ponytail: 2s poll; use fsnotify only if this ever becomes material.
+	go watchConfigFile(ctx, *configPath, 2*time.Second, reloadCh)
 
 	options := []app.Option{
 		app.WithConfigPath(*configPath),
@@ -103,6 +107,43 @@ func run() int {
 		return 1
 	}
 	return 0
+}
+
+func watchConfigFile(ctx context.Context, path string, interval time.Duration, notify chan<- string) {
+	hashFile := func() ([sha256.Size]byte, bool) {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return [sha256.Size]byte{}, false
+		}
+		return sha256.Sum256(data), true
+	}
+
+	last, seeded := hashFile()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			current, ok := hashFile()
+			if !ok {
+				continue
+			}
+			if !seeded {
+				last, seeded = current, true
+				continue
+			}
+			if current != last {
+				last = current
+				select {
+				case notify <- path:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}
 }
 
 func configuredAdminPassword() (string, bool, error) {

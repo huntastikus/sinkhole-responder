@@ -59,6 +59,21 @@ var overrideEnvironment = []string{
 	"SINKHOLE_JSONP_PARAM",
 }
 
+func TestRestartRequiredIgnoresRateLimitChanges(t *testing.T) {
+	baseline := defaultConfig()
+	desired := defaultConfig()
+	desired.Limits.RatePerIP = baseline.Limits.RatePerIP + 5
+	desired.Limits.RateBurst = baseline.Limits.RateBurst + 5
+	if RestartRequired(baseline, desired) {
+		t.Fatal("rate limit change must not require restart")
+	}
+
+	desired.Limits.MaxBodyBytes++
+	if !RestartRequired(baseline, desired) {
+		t.Fatal("other limit changes must still require restart")
+	}
+}
+
 func TestLoadEmptyFileUsesDefaults(t *testing.T) {
 	clearOverrides(t)
 	path := writeConfig(t, "")

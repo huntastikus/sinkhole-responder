@@ -1,11 +1,43 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
+
+func TestWatchConfigFileFiresOnContentChange(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(path, []byte("a: 1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	notify := make(chan string, 1)
+	go watchConfigFile(ctx, path, 10*time.Millisecond, notify)
+
+	time.Sleep(50 * time.Millisecond)
+	select {
+	case <-notify:
+		t.Fatal("watcher fired without a change")
+	default:
+	}
+	if err := os.WriteFile(path, []byte("a: 2\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case got := <-notify:
+		if got != path {
+			t.Fatalf("notify = %q, want %q", got, path)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("watcher did not fire on content change")
+	}
+}
 
 func TestConfiguredAdminPassword(t *testing.T) {
 	for _, name := range []string{"SINKHOLE_ADMIN_PASSWORD", "SINKHOLE_ADMIN_PASSWORD_FILE"} {

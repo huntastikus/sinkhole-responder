@@ -81,11 +81,8 @@ func recoverMiddleware(s *Server, next http.Handler) http.Handler {
 }
 
 func rateLimitMiddleware(limiters *clientLimiters, next http.Handler) http.Handler {
-	if !limiters.enabled {
-		return next
-	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !limiters.allow(clientIP(r.RemoteAddr)) {
+		if limiters.limitingEnabled() && !limiters.allow(clientIP(r.RemoteAddr)) {
 			w.(*statusRecorder).info.kind = "ratelimited"
 			w.Header().Set("Retry-After", "1")
 			http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
@@ -170,13 +167,36 @@ type clientLimiters struct {
 }
 
 func (l *clientLimiters) configure(requestsPerSecond float64, burst int) {
+	l.updateLimits(requestsPerSecond, burst)
+}
+
+func (l *clientLimiters) updateLimits(requestsPerSecond float64, burst int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	if requestsPerSecond <= 0 {
+		l.enabled = false
+		return
+	}
+	limit := rate.Limit(requestsPerSecond)
+	if l.enabled && l.limit == limit && l.burst == burst {
 		return
 	}
 	l.enabled = true
-	l.limit = rate.Limit(requestsPerSecond)
+	l.limit = limit
 	l.burst = burst
-	l.clients = make(map[string]*clientLimiter)
+	if l.clients == nil {
+		l.clients = make(map[string]*clientLimiter)
+	}
+	for _, entry := range l.clients {
+		entry.limiter = rate.NewLimiter(l.limit, l.burst)
+	}
+}
+
+func (l *clientLimiters) limitingEnabled() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.enabled
 }
 
 func (l *clientLimiters) allow(client string) bool {

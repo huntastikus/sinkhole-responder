@@ -397,17 +397,84 @@ function showSaveError(error, nearElement) {
   nearElement.textContent = message;
 }
 
+function formatBackupDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
+}
+
+function formatBackupSize(value) {
+  return `${new Intl.NumberFormat().format(Number(value) || 0)} B`;
+}
+
+function renderBackups(backups) {
+  const body = document.getElementById("backups-list");
+  const rows = backups.map((backup) => {
+    const row = document.createElement("tr");
+    for (const value of [backup.name, formatBackupDate(backup.mtime), formatBackupSize(backup.size)]) {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.append(cell);
+    }
+    const action = document.createElement("td");
+    const restore = document.createElement("button");
+    restore.className = "button button-secondary button-small";
+    restore.type = "button";
+    restore.dataset.restoreBackup = backup.name;
+    restore.textContent = "Restore";
+    action.append(restore);
+    row.append(action);
+    return row;
+  });
+  body.replaceChildren(...rows);
+  document.getElementById("backups-empty").hidden = rows.length !== 0;
+}
+
+async function restoreBackup(event) {
+  const button = event.target.closest("[data-restore-backup]");
+  if (!button) {
+    return;
+  }
+  const name = button.dataset.restoreBackup;
+  if (!window.confirm(`Restore ${name}? The current configuration will be backed up first.`)) {
+    return;
+  }
+
+  const errorElement = document.getElementById("backups-error");
+  errorElement.textContent = "";
+  button.disabled = true;
+  try {
+    const result = await requestJSON("/api/config/backups/restore", {
+      method: "POST",
+      body: JSON.stringify({ name, mtime: configMtime }),
+    });
+    configMtime = result.mtime;
+    await loadConfig();
+    if (result.restart_required) {
+      window.dispatchEvent(new Event("sinkhole:restart-check"));
+      showToast(document.getElementById("success-toast"), "Backup restored. Restart required to apply all settings.");
+    } else {
+      showToast(document.getElementById("success-toast"), "Backup restored and reloaded.");
+    }
+  } catch (error) {
+    showSaveError(error, errorElement);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function loadConfig(announce = false) {
   setBusy(true);
   try {
-    const [structured, raw] = await Promise.all([
+    const [structured, raw, backups] = await Promise.all([
       requestJSON("/api/config"),
       requestJSON("/api/config/raw"),
+      requestJSON("/api/config/backups"),
     ]);
     currentConfig = structured.config;
     configMtime = structured.mtime;
     rawMtime = raw.mtime;
     populateForm(currentConfig);
+    renderBackups(backups.backups);
     document.getElementById("raw-config").value = raw.raw;
     document.getElementById("form-error").textContent = "";
     document.getElementById("raw-error").textContent = "";
@@ -444,9 +511,13 @@ async function saveConfig(event) {
       body: JSON.stringify({ config: currentConfig, mtime: configMtime }),
     });
     configMtime = result.mtime;
-    const raw = await requestJSON("/api/config/raw");
+    const [raw, backups] = await Promise.all([
+      requestJSON("/api/config/raw"),
+      requestJSON("/api/config/backups"),
+    ]);
     rawMtime = raw.mtime;
     document.getElementById("raw-config").value = raw.raw;
+    renderBackups(backups.backups);
     if (result.restart_required) {
       window.dispatchEvent(new Event("sinkhole:restart-check"));
       showToast(document.getElementById("success-toast"), "Configuration saved. Restart required to apply — use the banner at the top.");
@@ -528,6 +599,44 @@ async function importConfig(event) {
   }
 }
 
+async function changePassword(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const currentPassword = document.getElementById("current-password").value;
+  const newPassword = document.getElementById("new-password").value;
+  const confirmPassword = document.getElementById("confirm-password").value;
+  const errorElement = document.getElementById("password-error");
+  const button = document.getElementById("change-password");
+  errorElement.textContent = "";
+  if (newPassword.length < 10) {
+    errorElement.textContent = "The new password must be at least 10 characters.";
+    document.getElementById("new-password").focus();
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    errorElement.textContent = "The new passwords do not match.";
+    document.getElementById("confirm-password").focus();
+    return;
+  }
+
+  button.disabled = true;
+  try {
+    await requestJSON("/api/admin/password", {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
+    form.reset();
+    showToast(document.getElementById("success-toast"), "Password changed — other sessions signed out.");
+  } catch (error) {
+    errorElement.textContent = error instanceof Error ? error.message : "The password could not be changed.";
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function addListener(kind) {
   const values = collectListeners(kind);
   values.push("");
@@ -569,11 +678,13 @@ function toggleRawEdit() {
 function main() {
   document.getElementById("config-form").addEventListener("submit", saveConfig);
   document.getElementById("import-config-form").addEventListener("submit", importConfig);
+  document.getElementById("password-form").addEventListener("submit", changePassword);
   document.getElementById("tls-mode").addEventListener("change", updateTLSVisibility);
   document.getElementById("add-static-cert").addEventListener("click", addStaticCert);
   document.getElementById("save-raw").addEventListener("click", saveRawConfig);
   document.getElementById("raw-edit-toggle").addEventListener("change", toggleRawEdit);
   document.getElementById("reload-config").addEventListener("click", () => loadConfig(true));
+  document.getElementById("backups-list").addEventListener("click", restoreBackup);
   for (const button of document.querySelectorAll("[data-add-listener]")) {
     button.addEventListener("click", () => addListener(button.dataset.addListener));
   }

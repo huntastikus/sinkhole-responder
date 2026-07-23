@@ -20,6 +20,7 @@ type statsAPIResponse struct {
 	RequestsTotal    uint64            `json:"requests_total"`
 	RequestsByKind   map[string]uint64 `json:"requests_by_kind"`
 	RequestsByStatus map[string]uint64 `json:"requests_by_status"`
+	RequestsByRule   map[string]uint64 `json:"requests_by_rule"`
 	RPS              float64           `json:"rps"`
 	RulesLoaded      int64             `json:"rules_loaded"`
 	LeafCacheSize    int64             `json:"leaf_cache_size"`
@@ -42,9 +43,9 @@ type historyAPIResponse struct {
 
 func TestStatsAPIReportsCurrentSnapshot(t *testing.T) {
 	metrics := mgmt.NewMetrics("v2.3.4")
-	metrics.ObserveRequest("js", http.StatusOK, 2*time.Millisecond)
-	metrics.ObserveRequest("js", http.StatusOK, 30*time.Millisecond)
-	metrics.ObserveRequest("image", http.StatusNoContent, time.Millisecond)
+	metrics.ObserveRequest("js", "block-js", http.StatusOK, 2*time.Millisecond)
+	metrics.ObserveRequest("js", "block-js", http.StatusOK, 30*time.Millisecond)
+	metrics.ObserveRequest("image", "", http.StatusNoContent, time.Millisecond)
 	metrics.SetRuleCount(7)
 	metrics.SetLeafCacheSize(11)
 	history := mgmt.NewHistory()
@@ -97,6 +98,9 @@ func TestStatsAPIReportsCurrentSnapshot(t *testing.T) {
 	}
 	if want := map[string]uint64{"200": 2, "204": 1}; !reflect.DeepEqual(body.RequestsByStatus, want) {
 		t.Errorf("requests_by_status = %#v, want %#v", body.RequestsByStatus, want)
+	}
+	if want := map[string]uint64{"block-js": 2}; !reflect.DeepEqual(body.RequestsByRule, want) {
+		t.Errorf("requests_by_rule = %#v, want %#v", body.RequestsByRule, want)
 	}
 	if body.RPS != 3 {
 		t.Errorf("rps = %v, want 3", body.RPS)

@@ -90,6 +90,8 @@ type componentResult struct {
 	err  error
 }
 
+const metricsStateFile = "metrics/state.json"
+
 func effectiveRules(cfg *config.Config) ([]rules.Rule, error) {
 	return rulepacks.Merge(cfg.Rules, cfg.Rulepacks.Enabled)
 }
@@ -235,6 +237,15 @@ func Run(ctx context.Context, cfg *config.Config, version string, logger *slog.L
 		if history == nil {
 			history = mgmt.NewHistory()
 		}
+		if data, readErr := os.ReadFile(appState.Path("metrics", "state.json")); readErr == nil {
+			if restoreErr := mgmt.RestoreState(metrics, history, data); restoreErr != nil {
+				logger.Warn("discarding unreadable metrics state", "error", restoreErr)
+			} else {
+				logger.Info("metrics state restored")
+			}
+		} else if !errors.Is(readErr, os.ErrNotExist) {
+			logger.Warn("read metrics state", "error", readErr)
+		}
 		_, credentialPresent, err := admin.LoadCredential(appState)
 		if err != nil {
 			return fmt.Errorf("load admin credential: %w", err)
@@ -318,6 +329,32 @@ func Run(ctx context.Context, cfg *config.Config, version string, logger *slog.L
 		defer reloads.Done()
 		reloadLoop(runCtx, logger, reloadCh, applyConfig)
 	}()
+	if appState != nil && history != nil {
+		reloads.Add(1)
+		go func() {
+			defer reloads.Done()
+			saveState := func() {
+				data, saveErr := mgmt.MarshalState(metrics, history)
+				if saveErr == nil {
+					saveErr = appState.WriteAtomic(metricsStateFile, data, 0o600)
+				}
+				if saveErr != nil {
+					logger.Warn("persist metrics state", "error", saveErr)
+				}
+			}
+			ticker := time.NewTicker(time.Minute)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-runCtx.Done():
+					saveState()
+					return
+				case <-ticker.C:
+					saveState()
+				}
+			}
+		}()
+	}
 
 	var readyTicker *time.Ticker
 	var ready <-chan time.Time

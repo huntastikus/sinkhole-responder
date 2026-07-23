@@ -55,6 +55,19 @@ func Available() []Pack {
 	return packs
 }
 
+// Rules returns the effective rules of a pack. Manifest packs expand to their
+// members' rules, each member included once.
+func Rules(name string) ([]rules.Rule, bool) {
+	if _, ok := packFiles[name]; !ok {
+		return nil, false
+	}
+	merged, err := Merge(nil, []string{name})
+	if err != nil {
+		return nil, false
+	}
+	return merged, true
+}
+
 // Merge returns user rules followed by the rules from enabled packs. Content
 // packs are included at most once, including when expanded from a manifest.
 func Merge(user []rules.Rule, enabled []string) ([]rules.Rule, error) {

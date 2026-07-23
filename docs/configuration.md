@@ -65,7 +65,9 @@ They are mutually exclusive and are intentionally not stored in YAML.
 
 ## Reload versus restart
 
-Send `SIGHUP` to reload the configuration:
+The responder watches the configuration file for content changes and applies
+valid edits within about two seconds. Atomic editor saves and direct rewrites
+are both detected. `SIGHUP` remains available for an immediate manual reload:
 
 ```sh
 sudo systemctl reload sinkhole-responder
@@ -74,6 +76,7 @@ sudo systemctl reload sinkhole-responder
 These settings reload immediately:
 
 - rules, rulepacks, defaults, and JSONP;
+- per-IP request rate and burst limits;
 - logging level, access logs, query/body capture, and anonymization;
 - admin session and login-rate tuning.
 
@@ -81,7 +84,7 @@ These need a restart:
 
 - public, admin, TLS, and management listeners;
 - TLS mode and certificate material;
-- timeouts, header/body limits, and rate limiting;
+- timeouts and header/body limits;
 - state directory.
 
 When an admin-UI save needs a restart, a banner appears on every page.
@@ -99,4 +102,3 @@ Invalid reloads are logged and the previous working configuration stays active.
 - [Rules and rulepacks](rules.md) for the `rules` schema.
 
 [Back to the documentation index](README.md)
-

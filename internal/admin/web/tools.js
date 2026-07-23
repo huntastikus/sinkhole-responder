@@ -3,6 +3,8 @@
 import { requestJSON } from "./api.js";
 
 let generatedYAML = "";
+let generatedToken = "";
+let tokenPresent = false;
 
 async function testDomain(event) {
   event.preventDefault();
@@ -84,6 +86,83 @@ async function copyAGHConfig() {
   }
 }
 
+function renderTokenStatus(status) {
+  tokenPresent = Boolean(status.present);
+  const created = new Date(status.created_at);
+  document.getElementById("api-token-status").textContent = tokenPresent
+    ? `API token created ${Number.isNaN(created.getTime()) ? status.created_at : created.toLocaleString()}.`
+    : "No API token.";
+  document.getElementById("generate-api-token").textContent = tokenPresent ? "Rotate token" : "Generate token";
+  document.getElementById("revoke-api-token").hidden = !tokenPresent;
+}
+
+async function loadTokenStatus() {
+  const message = document.getElementById("api-token-message");
+  try {
+    renderTokenStatus(await requestJSON("/api/admin/token"));
+  } catch (caught) {
+    message.textContent = caught instanceof Error ? caught.message : "Token status could not be loaded.";
+  }
+}
+
+async function generateAPIToken() {
+  if (tokenPresent && !window.confirm("Rotate the API token? The current token will stop working immediately.")) {
+    return;
+  }
+  const button = document.getElementById("generate-api-token");
+  const message = document.getElementById("api-token-message");
+  message.textContent = "";
+  button.disabled = true;
+  try {
+    const result = await requestJSON("/api/admin/token", { method: "POST" });
+    generatedToken = result.token;
+    document.getElementById("api-token-value").textContent = generatedToken;
+    document.getElementById("api-token-result").hidden = false;
+    renderTokenStatus(result);
+    message.textContent = tokenPresent ? "Token generated." : "";
+  } catch (caught) {
+    message.textContent = caught instanceof Error ? caught.message : "Token generation failed.";
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function revokeAPIToken() {
+  if (!window.confirm("Revoke the API token? Scripts using it will lose access immediately.")) {
+    return;
+  }
+  const button = document.getElementById("revoke-api-token");
+  const message = document.getElementById("api-token-message");
+  message.textContent = "";
+  button.disabled = true;
+  try {
+    await requestJSON("/api/admin/token", { method: "DELETE" });
+    generatedToken = "";
+    document.getElementById("api-token-value").textContent = "";
+    document.getElementById("api-token-result").hidden = true;
+    renderTokenStatus({ present: false });
+    message.textContent = "Token revoked.";
+  } catch (caught) {
+    message.textContent = caught instanceof Error ? caught.message : "Token revocation failed.";
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function copyAPIToken() {
+  const message = document.getElementById("api-token-message");
+  if (!navigator.clipboard?.writeText) {
+    message.textContent = "Clipboard access is unavailable. Select and copy the token manually.";
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(generatedToken);
+    message.textContent = "Token copied.";
+  } catch {
+    message.textContent = "Copy failed. Select and copy the token manually.";
+  }
+}
+
 function main() {
   const queryIP = new URLSearchParams(window.location.search).get("ip");
   if (queryIP) {
@@ -92,6 +171,10 @@ function main() {
   document.getElementById("domain-test-form").addEventListener("submit", testDomain);
   document.getElementById("agh-config-form").addEventListener("submit", generateAGHConfig);
   document.getElementById("copy-agh-config").addEventListener("click", () => void copyAGHConfig());
+  document.getElementById("generate-api-token").addEventListener("click", () => void generateAPIToken());
+  document.getElementById("revoke-api-token").addEventListener("click", () => void revokeAPIToken());
+  document.getElementById("copy-api-token").addEventListener("click", () => void copyAPIToken());
+  void loadTokenStatus();
 }
 
 if (typeof document !== "undefined") {

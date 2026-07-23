@@ -33,6 +33,15 @@ func (s *Server) authGate(next http.Handler) http.Handler {
 			return
 		}
 
+		if allowed, checked := s.apiTokenAllows(r); checked {
+			if allowed {
+				next.ServeHTTP(w, r)
+			} else {
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			}
+			return
+		}
+
 		if !s.credentialFound.Load() {
 			_, present, err := s.loadCredential()
 			if err != nil {
@@ -44,7 +53,8 @@ func (s *Server) authGate(next http.Handler) http.Handler {
 				return
 			}
 		}
-		if len(s.sessionKey) == 0 {
+		sessionKey := s.currentSessionKey()
+		if len(sessionKey) == 0 {
 			s.internalError(w, "validate admin session", fmt.Errorf("session key is unavailable"))
 			return
 		}
@@ -54,12 +64,36 @@ func (s *Server) authGate(next http.Handler) http.Handler {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
-		if _, valid := ParseSession(s.sessionKey, cookie.Value); !valid {
+		if _, valid := ParseSession(sessionKey, cookie.Value); !valid {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+var apiTokenReadPaths = map[string]bool{
+	"/api/stats":         true,
+	"/api/stats/history": true,
+	"/api/system/health": true,
+	"/api/logs":          true,
+}
+
+// apiTokenAllows reports (allowed, checked): checked is true only when the
+// request presented a bearer token for a whitelisted read path.
+func (s *Server) apiTokenAllows(r *http.Request) (bool, bool) {
+	if r.Method != http.MethodGet || !apiTokenReadPaths[r.URL.Path] {
+		return false, false
+	}
+	bearer, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if !ok {
+		return false, false
+	}
+	token, present, err := LoadAPIToken(s.deps.State)
+	if err != nil || !present {
+		return false, true
+	}
+	return token.Verify(strings.TrimSpace(bearer)), true
 }
 
 func (s *Server) csrfGate(next http.Handler) http.Handler {
@@ -198,14 +232,15 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) issueAuthCookies(w http.ResponseWriter) bool {
 	cfg := s.deps.Cfg()
-	if len(s.sessionKey) == 0 {
+	sessionKey := s.currentSessionKey()
+	if len(sessionKey) == 0 {
 		s.internalError(w, "issue admin session", fmt.Errorf("session key is unavailable"))
 		return false
 	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name: sessionCookieName,
-		Value: SignSession(s.sessionKey, Session{
+		Value: SignSession(sessionKey, Session{
 			User: "admin",
 			Exp:  time.Now().Add(cfg.Admin.SessionTTL),
 		}),
