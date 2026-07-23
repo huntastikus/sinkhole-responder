@@ -20,7 +20,7 @@ func (s *Server) finishRequest(recorder *statusRecorder, r *http.Request, info *
 		status = http.StatusOK
 	}
 	duration := time.Since(info.start)
-	s.metrics.ObserveRequest(info.kind, status, duration)
+	s.metrics.ObserveRequest(info.kind, info.rule, status, duration)
 	logAccess(s.accessLogger, info.state.cfg, r, info.rule, info.kind, status, duration, info.requestBody)
 }
 

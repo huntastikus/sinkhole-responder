@@ -21,9 +21,9 @@ import (
 
 func TestMetricsRequestCounters(t *testing.T) {
 	metrics := NewMetrics("test")
-	metrics.ObserveRequest("image", http.StatusOK, time.Millisecond)
-	metrics.ObserveRequest("image", http.StatusOK, time.Millisecond)
-	metrics.ObserveRequest("image", http.StatusNotFound, time.Millisecond)
+	metrics.ObserveRequest("image", "", http.StatusOK, time.Millisecond)
+	metrics.ObserveRequest("image", "", http.StatusOK, time.Millisecond)
+	metrics.ObserveRequest("image", "", http.StatusNotFound, time.Millisecond)
 
 	output := prometheusOutput(metrics)
 	for _, want := range []string{
@@ -38,9 +38,9 @@ func TestMetricsRequestCounters(t *testing.T) {
 
 func TestMetricsHistogram(t *testing.T) {
 	metrics := NewMetrics("test")
-	metrics.ObserveRequest("image", http.StatusOK, 3*time.Millisecond)
-	metrics.ObserveRequest("image", http.StatusOK, 50*time.Millisecond)
-	metrics.ObserveRequest("image", http.StatusOK, 2*time.Second)
+	metrics.ObserveRequest("image", "", http.StatusOK, 3*time.Millisecond)
+	metrics.ObserveRequest("image", "", http.StatusOK, 50*time.Millisecond)
+	metrics.ObserveRequest("image", "", http.StatusOK, 2*time.Second)
 	output := prometheusOutput(metrics)
 
 	for _, want := range []string{
@@ -70,6 +70,26 @@ func TestMetricsHistogram(t *testing.T) {
 	}
 }
 
+func TestObserveRequestCountsRuleHits(t *testing.T) {
+	metrics := NewMetrics("test")
+	metrics.ObserveRequest("script", "block-gpt", http.StatusOK, time.Millisecond)
+	metrics.ObserveRequest("script", "block-gpt", http.StatusOK, time.Millisecond)
+	metrics.ObserveRequest("image", "", http.StatusOK, time.Millisecond)
+
+	snapshot := metrics.Snapshot()
+	if snapshot.RequestsByRule["block-gpt"] != 2 {
+		t.Fatalf("RequestsByRule[block-gpt] = %d, want 2", snapshot.RequestsByRule["block-gpt"])
+	}
+	if _, present := snapshot.RequestsByRule[""]; present {
+		t.Fatal("empty rule name must not be counted")
+	}
+	var output strings.Builder
+	metrics.WritePrometheus(&output)
+	if !strings.Contains(output.String(), `sinkhole_rule_hits_total{rule="block-gpt"} 2`) {
+		t.Fatalf("prometheus output missing rule counter:\n%s", output.String())
+	}
+}
+
 func TestMetricsMetadataGaugesAndBuildInfo(t *testing.T) {
 	metrics := NewMetrics("v1.2.3")
 	metrics.SetRuleCount(7)
@@ -79,6 +99,7 @@ func TestMetricsMetadataGaugesAndBuildInfo(t *testing.T) {
 
 	families := map[string]string{
 		"sinkhole_requests_total":           "counter",
+		"sinkhole_rule_hits_total":          "counter",
 		"sinkhole_request_duration_seconds": "histogram",
 		"sinkhole_rules_loaded":             "gauge",
 		"sinkhole_tls_leaf_cache_entries":   "gauge",
@@ -105,10 +126,10 @@ func TestMetricsMetadataGaugesAndBuildInfo(t *testing.T) {
 
 func TestMetricsPrometheusOutputGolden(t *testing.T) {
 	metrics := NewMetrics("v1\"test\\build\nnext")
-	metrics.ObserveRequest("script", http.StatusNoContent, 6*time.Second)
-	metrics.ObserveRequest("image", http.StatusNotFound, 5*time.Millisecond)
-	metrics.ObserveRequest("image", http.StatusOK, 500*time.Microsecond)
-	metrics.ObserveRequest("script", http.StatusOK, 25*time.Millisecond)
+	metrics.ObserveRequest("script", "", http.StatusNoContent, 6*time.Second)
+	metrics.ObserveRequest("image", "", http.StatusNotFound, 5*time.Millisecond)
+	metrics.ObserveRequest("image", "", http.StatusOK, 500*time.Microsecond)
+	metrics.ObserveRequest("script", "", http.StatusOK, 25*time.Millisecond)
 	metrics.SetRuleCount(7)
 	metrics.SetLeafCacheSize(9)
 
@@ -118,6 +139,8 @@ sinkhole_requests_total{kind="image",status="200"} 1
 sinkhole_requests_total{kind="image",status="404"} 1
 sinkhole_requests_total{kind="script",status="200"} 1
 sinkhole_requests_total{kind="script",status="204"} 1
+# HELP sinkhole_rule_hits_total Requests matched per configured rule.
+# TYPE sinkhole_rule_hits_total counter
 # HELP sinkhole_request_duration_seconds Sinkhole request duration in seconds.
 # TYPE sinkhole_request_duration_seconds histogram
 sinkhole_request_duration_seconds_bucket{le="0.001"} 1
@@ -148,10 +171,10 @@ sinkhole_build_info{version="v1\"test\\build\nnext"} 1
 func TestMetricsSnapshotReflectsObservedValues(t *testing.T) {
 	startedAt := time.Date(2026, time.July, 20, 12, 34, 56, 0, time.UTC)
 	metrics := newMetrics("v2-test", func() time.Time { return startedAt })
-	metrics.ObserveRequest("script", http.StatusNoContent, 6*time.Second)
-	metrics.ObserveRequest("image", http.StatusNotFound, 5*time.Millisecond)
-	metrics.ObserveRequest("image", http.StatusOK, 500*time.Microsecond)
-	metrics.ObserveRequest("script", http.StatusOK, 25*time.Millisecond)
+	metrics.ObserveRequest("script", "", http.StatusNoContent, 6*time.Second)
+	metrics.ObserveRequest("image", "", http.StatusNotFound, 5*time.Millisecond)
+	metrics.ObserveRequest("image", "", http.StatusOK, 500*time.Microsecond)
+	metrics.ObserveRequest("script", "", http.StatusOK, 25*time.Millisecond)
 	metrics.SetRuleCount(7)
 	metrics.SetLeafCacheSize(9)
 
@@ -209,7 +232,7 @@ func TestMetricsStartedAtUsesInjectedClock(t *testing.T) {
 
 func TestNilMetricsUpdatesDoNotPanic(t *testing.T) {
 	var metrics *Metrics
-	metrics.ObserveRequest("image", http.StatusOK, time.Second)
+	metrics.ObserveRequest("image", "", http.StatusOK, time.Second)
 	metrics.SetRuleCount(1)
 	metrics.SetLeafCacheSize(1)
 }
@@ -221,7 +244,7 @@ func TestMetricsConcurrentAccess(t *testing.T) {
 		writers.Add(1)
 		go func() {
 			defer writers.Done()
-			metrics.ObserveRequest("image", http.StatusOK, time.Millisecond)
+			metrics.ObserveRequest("image", "", http.StatusOK, time.Millisecond)
 		}()
 	}
 
